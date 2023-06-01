@@ -1,6 +1,9 @@
 public class Main {
 
     public static void main(String[] args) {
-        System.out.println("Поехали!");
+
+        Interaction action = new Interaction();
+        action.interaction();
+
     }
 }
