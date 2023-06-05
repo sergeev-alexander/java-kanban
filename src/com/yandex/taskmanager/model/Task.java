@@ -1,17 +1,10 @@
+package com.yandex.taskmanager.model;
+
 import java.util.Objects;
-
-enum Status {
-    NEW, IN_PROGRESS, DONE
-}
-
-enum Type {
-    TASK, EPIC, SUBTASK
-}
 
 public class Task {
 
     private int id;
-    private final Type type = Type.TASK;
     private Status status;
     private String title;
     private String description;
@@ -25,7 +18,7 @@ public class Task {
     }
 
     public Type getType() {
-        return type;
+        return Type.TASK;
     }
 
     public Status getStatus() {
@@ -71,7 +64,7 @@ public class Task {
     public String toString() {
         return "Task{" +
                 "id=" + id +
-                ", type=" + type +
+                ", type=" + getType() +
                 ", status=" + status +
                 ", title='" + title + '\'' +
                 ", description='" + description + '\'' +
