@@ -1,13 +1,14 @@
+package com.yandex.taskmanager.model;
+
 import java.util.Objects;
 
 public class Subtask extends Task {
 
-    private final Type type = Type.SUBTASK;
     private int epicId;
 
     @Override
     public Type getType() {
-        return this.type;
+        return Type.SUBTASK;
     }
 
     public int getEpicId() {
@@ -36,7 +37,7 @@ public class Subtask extends Task {
     public String toString() {
         return "Subtask{}" +
                 "id=" + getId() +
-                ", type=" + type +
+                ", type=" + getType() +
                 ", status='" + getStatus() + '\'' +
                 ", title='" + getTitle() + '\'' +
                 ", description='" + getDescription() + '\'' +
