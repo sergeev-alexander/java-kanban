@@ -1,3 +1,8 @@
+package com.yandex.taskmanager;
+
+import com.yandex.taskmanager.model.*;
+import com.yandex.taskmanager.service.Manager;
+
 import java.util.Scanner;
 
 public class Interaction {
@@ -12,10 +17,10 @@ public class Interaction {
             int command = inputToInt(input);
             switch (command) {
                 case 1:
-                    manager.updateTask(createNewTask(userSelectTaskType()));
+                    createNewTask(userSelectTaskType());
                     break;
                 case 2:
-                    System.out.println(manager.getAllTasks());
+                    System.out.println(manager.getAllItems());
                     break;
                 case 3:
                     System.out.println(manager.getTasksByType(userTypeChoice(userSelectTaskType())));
@@ -30,7 +35,7 @@ public class Interaction {
                     System.out.println(manager.getTaskById(userSelectId()));
                     break;
                 case 7:
-                    manager.updateTask(updateExistingTask());
+                    updateExistingTask();
                     break;
                 case 8:
                     manager.deleteTaskById(userSelectId());
@@ -90,6 +95,16 @@ public class Interaction {
                         return id;
                     }
                 }
+                for (Epic epic : manager.getEpicMap().values()) {
+                    if (epic.getId() == id) {
+                        return id;
+                    }
+                }
+                for (Subtask subtask : manager.getSubtaskMap().values()) {
+                    if (subtask.getId() == id) {
+                        return id;
+                    }
+                }
                 System.out.println("There's no task with [" + id + "] id" +
                         "\nTry again!");
             } else {
@@ -105,8 +120,8 @@ public class Interaction {
             String input = sc.nextLine();
             int id = inputToInt(input);
             if (id > 0) {
-                for (Task task : manager.getTaskMap().values()) {
-                    if (task.getId() == id && task.getType().equals(Type.EPIC)) {
+                for (Epic epic : manager.getEpicMap().values()) {
+                    if (epic.getId() == id) {
                         return id;
                     }
                 }
@@ -132,22 +147,25 @@ public class Interaction {
         return Integer.parseInt(input);
     }
 
-    private Task createNewTask(int command) {
+    private void createNewTask(int command) {
         switch (command) {
             case 1:
-                return addNewTask();
+                addNewTask();
+                break;
             case 2:
-                return addNewEpic();
+                addNewEpic();
+                break;
             case 3:
-                return addNewSubtask();
+                addNewSubtask();
+                break;
             default:
                 throw new IllegalStateException("Unexpected value: " + command);
         }
     }
 
-    private Task addNewTask() {
+    private void addNewTask() {
         Task task = new Task();
-        task.setId(manager.createId());
+        task.setId(manager.getId());
         System.out.println("Insert task title!");
         String title = sc.nextLine();
         task.setTitle(title);
@@ -155,12 +173,12 @@ public class Interaction {
         String description = sc.nextLine();
         task.setDescription(description);
         task.setStatus(Status.NEW);
-        return task;
+        manager.updateTask(task);
     }
 
-    private Task addNewEpic() {
+    private void addNewEpic() {
         Epic epic = new Epic();
-        epic.setId(manager.createId());
+        epic.setId(manager.getId());
         System.out.println("Insert epic title!");
         String title = sc.nextLine();
         epic.setTitle(title);
@@ -168,13 +186,13 @@ public class Interaction {
         String description = sc.nextLine();
         epic.setDescription(description);
         epic.setStatus(Status.NEW);
-        return epic;
+        manager.updateEpic(epic);
     }
 
-    private Task addNewSubtask() {
+    private void addNewSubtask() {
         int epicId = userSelectEpicId();
         Subtask subtask = new Subtask();
-        int subtaskId = manager.createId();
+        int subtaskId = manager.getId();
         subtask.setId(subtaskId);
         subtask.setEpicId(epicId);
         System.out.println("Insert subtask title!");
@@ -184,9 +202,8 @@ public class Interaction {
         String description = sc.nextLine();
         subtask.setDescription(description);
         subtask.setStatus(Status.NEW);
-        ((Epic) manager.getTaskMap().get(epicId)).setSubtasksIdToEpicList(subtaskId);
-        return subtask;
-
+        manager.getEpicMap().get(epicId).setSubtasksIdToEpicList(subtaskId);
+        manager.updateSubtask(subtask);
     }
 
     private Type userTypeChoice(int command) {
@@ -202,19 +219,20 @@ public class Interaction {
         }
     }
 
-    private Task updateExistingTask() {
+    private void updateExistingTask() {
         while (true) {
             System.out.println("Input task id you want to change!");
             String userInput = sc.nextLine();
             int id = inputToInt(userInput);
             if (manager.getTaskMap().containsKey(id)) {
-                if (manager.getTaskMap().get(id).getType().equals(Type.TASK)) {
-                    return updateTask(id);
-                } else if (manager.getTaskMap().get(id).getType().equals(Type.EPIC)) {
-                    return updateEpic(id);
-                } else {
-                    return updateSubtask(id);
-                }
+                updateTask(id);
+                return;
+            } else if (manager.getEpicMap().containsKey(id)) {
+                updateEpic(id);
+                return;
+            } else if (manager.getSubtaskMap().containsKey(id)) {
+                updateSubtask(id);
+                return;
             } else {
                 System.out.println("There's no task with [" + userInput + "] id!" +
                         "\nTry again!");
@@ -245,7 +263,7 @@ public class Interaction {
         }
     }
 
-    private Task updateTask(int id) {
+    private void updateTask(int id) {
         Task task = new Task();
         task.setId(id);
         System.out.println("Insert new task title!");
@@ -255,10 +273,10 @@ public class Interaction {
         String description = sc.nextLine();
         task.setDescription(description);
         task.setStatus(updateStatus());
-        return task;
+        manager.updateTask(task);
     }
 
-    private Epic updateEpic(int id) {
+    private void updateEpic(int id) {
         Epic epic = new Epic();
         epic.setId(id);
         System.out.println("Insert new epic title!");
@@ -269,13 +287,13 @@ public class Interaction {
         epic.setDescription(description);
         epic.setStatus(updateStatus());
         epic.setSubTasksIdList(((Epic) manager.getTaskMap().get(id)).getSubTasksIdList());
-        return epic;
+        manager.updateEpic(epic);
     }
 
-    private Subtask updateSubtask(int id) {
+    private void updateSubtask(int id) {
         Subtask subtask = new Subtask();
         subtask.setId(id);
-        subtask.setEpicId(((Subtask) manager.getTaskMap().get(id)).getEpicId());
+        subtask.setEpicId(manager.getSubtaskMap().get(id).getEpicId());
         System.out.println("Insert new subtask title!");
         String title = sc.nextLine();
         subtask.setTitle(title);
@@ -283,6 +301,6 @@ public class Interaction {
         String description = sc.nextLine();
         subtask.setDescription(description);
         subtask.setStatus(updateStatus());
-        return subtask;
+        manager.updateSubtask(subtask);
     }
 }
