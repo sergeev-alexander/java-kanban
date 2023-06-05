@@ -1,15 +1,16 @@
+package com.yandex.taskmanager.model;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
 public class Epic extends Task {
 
-    private final Type type = Type.EPIC;
     private List<Integer> subTasksIdList = new ArrayList<>();
 
     @Override
     public Type getType() {
-        return this.type;
+        return Type.EPIC;
     }
 
     public List<Integer> getSubTasksIdList() {
@@ -41,7 +42,7 @@ public class Epic extends Task {
     public String toString() {
         return "Epic{}" +
                 "id=" + getId() +
-                ", type=" + type +
+                ", type=" + getType() +
                 ", status='" + getStatus() + '\'' +
                 ", title='" + getTitle() + '\'' +
                 ", description='" + getDescription() + '\'' +
