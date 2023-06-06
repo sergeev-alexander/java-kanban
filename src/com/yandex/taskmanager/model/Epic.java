@@ -21,9 +21,14 @@ public class Epic extends Task {
         this.subTasksIdList = subTasksIdList;
     }
 
-    public void setSubtasksIdToEpicList(int subtasksId) {
+    public void addSubtasksIdToEpicList(int subtasksId) {
         this.subTasksIdList.add(subtasksId);
     }
+
+    public void removeSubtaskIdFromEpicList(int subtasksId) {
+        subTasksIdList.remove((Integer) subtasksId);
+    }
+
 
     @Override
     public boolean equals(Object o) {
