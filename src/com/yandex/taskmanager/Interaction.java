@@ -165,7 +165,6 @@ public class Interaction {
 
     private void addNewTask() {
         Task task = new Task();
-        task.setId(manager.getId());
         System.out.println("Insert task title!");
         String title = sc.nextLine();
         task.setTitle(title);
@@ -178,7 +177,6 @@ public class Interaction {
 
     private void addNewEpic() {
         Epic epic = new Epic();
-        epic.setId(manager.getId());
         System.out.println("Insert epic title!");
         String title = sc.nextLine();
         epic.setTitle(title);
@@ -192,8 +190,6 @@ public class Interaction {
     private void addNewSubtask() {
         int epicId = userSelectEpicId();
         Subtask subtask = new Subtask();
-        int subtaskId = manager.getId();
-        subtask.setId(subtaskId);
         subtask.setEpicId(epicId);
         System.out.println("Insert subtask title!");
         String title = sc.nextLine();
@@ -270,7 +266,7 @@ public class Interaction {
         String description = sc.nextLine();
         task.setDescription(description);
         task.setStatus(updateStatus());
-        manager.addNewTask(task);
+        manager.updateTask(task);
     }
 
     private void updateEpic(Epic epic) {
@@ -281,7 +277,7 @@ public class Interaction {
         String description = sc.nextLine();
         epic.setDescription(description);
         epic.setStatus(updateStatus());
-        manager.addNewEpic(epic);
+        manager.updateEpic(epic);
     }
 
     private void updateSubtask(Subtask subtask) {
@@ -292,7 +288,7 @@ public class Interaction {
         String description = sc.nextLine();
         subtask.setDescription(description);
         subtask.setStatus(updateStatus());
-        manager.addNewSubtask(subtask);
+        manager.updateSubtask(subtask);
         ((Epic) manager.getTaskById(subtask.getEpicId())).removeSubtaskIdFromEpicList(subtask.getId());
     }
 }

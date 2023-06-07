@@ -11,18 +11,15 @@ public class Manager {
     private final Map<Integer, Epic> epicMap = new HashMap<>();
     private final Map<Integer, Subtask> subtaskMap = new HashMap<>();
 
-    public int getId() { // Согласно предыдущему ревью метод createId() был сделан приватным, и чтобы получить
-        // доступ к нему из класса Interaction был создан публичный метод getId()
-        return createId();
-    }
-
     public void updateTask(Task newTask) {
         Task existingTask = taskMap.get(newTask.getId());
         existingTask.setTitle(newTask.getTitle());
         existingTask.setDescription(newTask.getDescription());
+        existingTask.setStatus(newTask.getStatus());
     }
 
     public void addNewTask(Task task) {
+        task.setId(createId());
         taskMap.put(task.getId(), task);
     }
 
@@ -30,19 +27,24 @@ public class Manager {
         Epic existingEpic = epicMap.get(newEpic.getId());
         existingEpic.setTitle(newEpic.getTitle());
         existingEpic.setDescription(newEpic.getDescription());
+        existingEpic.setStatus(newEpic.getStatus());
     }
 
     public void addNewEpic(Epic epic) {
+        epic.setId(createId());
         epicMap.put(epic.getId(), epic);
     }
 
     public void updateSubtask(Subtask newSubtask) {
-        Subtask exsistingSubtask = subtaskMap.get(newSubtask.getId());
-        exsistingSubtask.setTitle(exsistingSubtask.getTitle());
-        exsistingSubtask.setDescription(newSubtask.getDescription());
+        Subtask existingSubtask = subtaskMap.get(newSubtask.getId());
+        existingSubtask.setTitle(existingSubtask.getTitle());
+        existingSubtask.setDescription(newSubtask.getDescription());
+        existingSubtask.setStatus(newSubtask.getStatus());
+        updateEpicStatus(newSubtask.getEpicId());
     }
 
     public void addNewSubtask(Subtask subtask) {
+        subtask.setId(createId());
         subtaskMap.put(subtask.getId(), subtask);
         epicMap.get(subtask.getEpicId()).addSubtasksIdToEpicList(subtask.getId());
         updateEpicStatus(subtask.getEpicId());
@@ -101,10 +103,9 @@ public class Manager {
                     subtaskMap.remove(subtaskId);
                 }
             }
-            epicMap.remove(id, epicMap.get(id));
+            epicMap.remove(id);
         } else if (subtaskMap.containsKey(id)) {
-            int epicId = subtaskMap.get(id).getEpicId();
-            subtaskMap.remove(id);
+            int epicId = subtaskMap.remove(id).getEpicId();
             epicMap.get(epicId).removeSubtaskIdFromEpicList(id);
             updateEpicStatus(epicId);
         }
