@@ -27,7 +27,8 @@ public class Manager {
         Epic existingEpic = epicMap.get(newEpic.getId());
         existingEpic.setTitle(newEpic.getTitle());
         existingEpic.setDescription(newEpic.getDescription());
-        existingEpic.setStatus(newEpic.getStatus());
+        existingEpic.setSubTasksIdList(updateSubtasksIdListWhileEpicUpdating(existingEpic.getId()));
+        updateEpicStatus(newEpic.getId());
     }
 
     public void addNewEpic(Epic epic) {
@@ -178,5 +179,16 @@ public class Manager {
         } else {
             epicMap.get(epicId).setStatus(Status.NEW);
         }
+    }
+
+    private List<Integer> updateSubtasksIdListWhileEpicUpdating(int epicId) {
+        List<Subtask> subtasks = getAllSubtasks();
+        List<Integer> subTasksIdList = new ArrayList<>();
+        for (Subtask subtask : subtasks) {
+            if (subtask.getEpicId() == epicId) {
+                subTasksIdList.add(subtask.getId());
+            }
+        }
+        return subTasksIdList;
     }
 }

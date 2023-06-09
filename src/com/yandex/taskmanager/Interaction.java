@@ -289,6 +289,5 @@ public class Interaction {
         subtask.setDescription(description);
         subtask.setStatus(updateStatus());
         manager.updateSubtask(subtask);
-        ((Epic) manager.getTaskById(subtask.getEpicId())).removeSubtaskIdFromEpicList(subtask.getId());
     }
 }
