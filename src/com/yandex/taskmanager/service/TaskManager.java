@@ -2,11 +2,12 @@ package com.yandex.taskmanager.service;
 
 import com.yandex.taskmanager.model.*;
 
+import java.util.LinkedList;
 import java.util.List;
 
 public interface TaskManager {
 
-
+    LinkedList<Task> getHistory();
     Task getTask(int taskId);
 
     Epic getEpic(int epicId);
@@ -44,11 +45,4 @@ public interface TaskManager {
     Task getTaskById(int id);
 
     List<Subtask> getEpicsSubtasksById(int epicId);
-
-    int createId();
-
-    void updateEpicStatus(int epicId);
-
-    List<Integer> updateSubtasksIdListWhileEpicUpdating(int epicId);
-
 }
