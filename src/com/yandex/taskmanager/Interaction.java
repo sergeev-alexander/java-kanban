@@ -1,16 +1,14 @@
 package com.yandex.taskmanager;
 
 import com.yandex.taskmanager.model.*;
-import com.yandex.taskmanager.service.InMemoryHistoryManager;
-import com.yandex.taskmanager.service.InMemoryTaskManager;
+import com.yandex.taskmanager.service.Managers;
+import com.yandex.taskmanager.service.TaskManager;
 
 import java.util.Scanner;
 
 public class Interaction {
 
-    InMemoryHistoryManager historyManager = new InMemoryHistoryManager();
-
-    InMemoryTaskManager taskManager = new InMemoryTaskManager(historyManager);
+    TaskManager taskManager = Managers.getDefaultTaskManager();
 
     Scanner sc = new Scanner(System.in);
 
@@ -48,7 +46,7 @@ public class Interaction {
                     System.out.println(taskManager.getEpicsSubtasksById(userSelectEpicId()));
                     break;
                 case 10:
-                    System.out.println(historyManager.getHistory());
+                    System.out.println(taskManager.getHistory());
                     break;
                 case 0:
                     System.out.println("Good bye!");
@@ -164,6 +162,10 @@ public class Interaction {
                 addNewEpic();
                 break;
             case 3:
+                if (taskManager.getTasksByType(Type.EPIC).isEmpty()) {
+                    System.out.println("Unable to create subtask! There is no epics.");
+                    return;
+                }
                 addNewSubtask();
                 break;
             default:
@@ -224,6 +226,10 @@ public class Interaction {
 
     private void updateExistingTask() {
         while (true) {
+            if (taskManager.getAllItems().isEmpty()) {
+                System.out.println("There is no tasks to change!");
+                return;
+            }
             System.out.println("Input task id you want to change!");
             String userInput = sc.nextLine();
             int id = inputToInt(userInput);
