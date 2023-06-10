@@ -1,14 +1,18 @@
 package com.yandex.taskmanager;
 
 import com.yandex.taskmanager.model.*;
-import com.yandex.taskmanager.service.Manager;
+import com.yandex.taskmanager.service.InMemoryHistoryManager;
+import com.yandex.taskmanager.service.InMemoryTaskManager;
 
 import java.util.Scanner;
 
 public class Interaction {
 
+    InMemoryHistoryManager historyManager = new InMemoryHistoryManager();
+
+    InMemoryTaskManager taskManager = new InMemoryTaskManager(historyManager);
+
     Scanner sc = new Scanner(System.in);
-    Manager manager = new Manager();
 
     public void interaction() {
         while (true) {
@@ -20,28 +24,31 @@ public class Interaction {
                     createNewTask(userSelectTaskType());
                     break;
                 case 2:
-                    System.out.println(manager.getAllItems());
+                    System.out.println(taskManager.getAllItems());
                     break;
                 case 3:
-                    System.out.println(manager.getTasksByType(userTypeChoice(userSelectTaskType())));
+                    System.out.println(taskManager.getTasksByType(userTypeChoice(userSelectTaskType())));
                     break;
                 case 4:
-                    manager.deleteAllTasks();
+                    taskManager.deleteAllTasks();
                     break;
                 case 5:
-                    manager.deleteTasksByType(userTypeChoice(userSelectTaskType()));
+                    taskManager.deleteTasksByType(userTypeChoice(userSelectTaskType()));
                     break;
                 case 6:
-                    System.out.println(manager.getTaskById(userSelectId()));
+                    System.out.println(taskManager.getTaskById(userSelectId()));
                     break;
                 case 7:
                     updateExistingTask();
                     break;
                 case 8:
-                    manager.deleteTaskById(userSelectId());
+                    taskManager.deleteTaskById(userSelectId());
                     break;
                 case 9:
-                    System.out.println(manager.getEpicsSubtasksById(userSelectEpicId()));
+                    System.out.println(taskManager.getEpicsSubtasksById(userSelectEpicId()));
+                    break;
+                case 10:
+                    System.out.println(historyManager.getHistory());
                     break;
                 case 0:
                     System.out.println("Good bye!");
@@ -56,15 +63,16 @@ public class Interaction {
 
     private void printMenu() {
         System.out.println("\nWhat are you going to do?" +
-                "\n(1) - Add new task" +
-                "\n(2) - Show all tasks" +
-                "\n(3) - Show tasks by type" +
-                "\n(4) - Delete all tasks" +
-                "\n(5) - Delete tasks by type" +
-                "\n(6) - Show task by id" +
-                "\n(7) - Update existing task" +
-                "\n(8) - Delete task by id" +
-                "\n(9) - Show subtasks of an epic" +
+                "\n(1)  - Add new task" +
+                "\n(2)  - Show all tasks" +
+                "\n(3)  - Show tasks by type" +
+                "\n(4)  - Delete all tasks" +
+                "\n(5)  - Delete tasks by type" +
+                "\n(6)  - Show task by id" +
+                "\n(7)  - Update existing task" +
+                "\n(8)  - Delete task by id" +
+                "\n(9)  - Show subtasks of an epic" +
+                "\n(10) - Show history of views" +
                 "\n(0) - Exit app");
     }
 
@@ -90,17 +98,17 @@ public class Interaction {
             String input = sc.nextLine();
             int id = inputToInt(input);
             if (id > 0) {
-                for (Task task : manager.getAllTasks()) {
+                for (Task task : taskManager.getAllTasks()) {
                     if (task.getId() == id) {
                         return id;
                     }
                 }
-                for (Epic epic : manager.getAllEpics()) {
+                for (Epic epic : taskManager.getAllEpics()) {
                     if (epic.getId() == id) {
                         return id;
                     }
                 }
-                for (Subtask subtask : manager.getAllSubtasks()) {
+                for (Subtask subtask : taskManager.getAllSubtasks()) {
                     if (subtask.getId() == id) {
                         return id;
                     }
@@ -120,7 +128,7 @@ public class Interaction {
             String input = sc.nextLine();
             int id = inputToInt(input);
             if (id > 0) {
-                for (Epic epic : manager.getAllEpics()) {
+                for (Epic epic : taskManager.getAllEpics()) {
                     if (epic.getId() == id) {
                         return id;
                     }
@@ -172,7 +180,7 @@ public class Interaction {
         String description = sc.nextLine();
         task.setDescription(description);
         task.setStatus(Status.NEW);
-        manager.addNewTask(task);
+        taskManager.addNewTask(task);
     }
 
     private void addNewEpic() {
@@ -184,7 +192,7 @@ public class Interaction {
         String description = sc.nextLine();
         epic.setDescription(description);
         epic.setStatus(Status.NEW);
-        manager.addNewEpic(epic);
+        taskManager.addNewEpic(epic);
     }
 
     private void addNewSubtask() {
@@ -198,7 +206,7 @@ public class Interaction {
         String description = sc.nextLine();
         subtask.setDescription(description);
         subtask.setStatus(Status.NEW);
-        manager.addNewSubtask(subtask);
+        taskManager.addNewSubtask(subtask);
     }
 
     private Type userTypeChoice(int command) {
@@ -219,14 +227,14 @@ public class Interaction {
             System.out.println("Input task id you want to change!");
             String userInput = sc.nextLine();
             int id = inputToInt(userInput);
-            if (manager.getTasksByType(Type.TASK).contains(manager.getTaskById(id))) {
-                updateTask(manager.getTaskById(id));
+            if (taskManager.getTasksByType(Type.TASK).contains(taskManager.getTaskById(id))) {
+                updateTask(taskManager.getTaskById(id));
                 return;
-            } else if (manager.getTasksByType(Type.EPIC).contains(manager.getTaskById(id))) {
-                updateEpic((Epic) manager.getTaskById(id));
+            } else if (taskManager.getTasksByType(Type.EPIC).contains(taskManager.getTaskById(id))) {
+                updateEpic((Epic) taskManager.getTaskById(id));
                 return;
-            } else if (manager.getTasksByType(Type.SUBTASK).contains(manager.getTaskById(id))) {
-                updateSubtask((Subtask) manager.getTaskById(id));
+            } else if (taskManager.getTasksByType(Type.SUBTASK).contains(taskManager.getTaskById(id))) {
+                updateSubtask((Subtask) taskManager.getTaskById(id));
                 return;
             } else {
                 System.out.println("There's no task with [" + userInput + "] id!" +
@@ -266,7 +274,7 @@ public class Interaction {
         String description = sc.nextLine();
         task.setDescription(description);
         task.setStatus(updateStatus());
-        manager.updateTask(task);
+        taskManager.updateTask(task);
     }
 
     private void updateEpic(Epic epic) {
@@ -277,7 +285,7 @@ public class Interaction {
         String description = sc.nextLine();
         epic.setDescription(description);
         epic.setStatus(updateStatus());
-        manager.updateEpic(epic);
+        taskManager.updateEpic(epic);
     }
 
     private void updateSubtask(Subtask subtask) {
@@ -288,6 +296,6 @@ public class Interaction {
         String description = sc.nextLine();
         subtask.setDescription(description);
         subtask.setStatus(updateStatus());
-        manager.updateSubtask(subtask);
+        taskManager.updateSubtask(subtask);
     }
 }
