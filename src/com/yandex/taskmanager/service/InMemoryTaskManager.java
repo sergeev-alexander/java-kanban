@@ -11,13 +11,15 @@ public class InMemoryTaskManager implements TaskManager {
     private final Map<Integer, Epic> epicMap = new HashMap<>();
     private final Map<Integer, Subtask> subtaskMap = new HashMap<>();
 
-    InMemoryHistoryManager historyManager;
+    private final HistoryManager historyManager;
 
-    InMemoryTaskManager(){
+    public InMemoryTaskManager(HistoryManager historyManager) {
+        this.historyManager = historyManager;
     }
 
-    public InMemoryTaskManager(InMemoryHistoryManager historyManager) {
-        this.historyManager = historyManager;
+    @Override
+    public LinkedList<Task> getHistory() {
+        return historyManager.getHistory();
     }
 
     @Override
@@ -60,8 +62,6 @@ public class InMemoryTaskManager implements TaskManager {
         Epic existingEpic = epicMap.get(newEpic.getId());
         existingEpic.setTitle(newEpic.getTitle());
         existingEpic.setDescription(newEpic.getDescription());
-        existingEpic.setSubTasksIdList(updateSubtasksIdListWhileEpicUpdating(existingEpic.getId()));
-        updateEpicStatus(newEpic.getId());
     }
 
     @Override
@@ -197,13 +197,11 @@ public class InMemoryTaskManager implements TaskManager {
         return subtaskList;
     }
 
-    @Override
-    public int createId() {
+    private int createId() {
         return ++id;
     }
 
-    @Override
-    public void updateEpicStatus(int epicId) {
+    private void updateEpicStatus(int epicId) {
         Epic existingEpic = epicMap.get(epicId);
         List<Integer> subtasksIdList = existingEpic.getSubTasksIdList();
         int newSubtasksCount = 0;
@@ -223,21 +221,11 @@ public class InMemoryTaskManager implements TaskManager {
                 existingEpic.setStatus(Status.NEW);
             } else if (doneSubtasksCount == subtasksIdList.size()) {
                 existingEpic.setStatus(Status.DONE);
+            } else {
+                existingEpic.setStatus(Status.IN_PROGRESS);
             }
         } else {
             epicMap.get(epicId).setStatus(Status.NEW);
         }
-    }
-
-    @Override
-    public List<Integer> updateSubtasksIdListWhileEpicUpdating(int epicId) {
-        List<Subtask> subtasks = getAllSubtasks();
-        List<Integer> subTasksIdList = new ArrayList<>();
-        for (Subtask subtask : subtasks) {
-            if (subtask.getEpicId() == epicId) {
-                subTasksIdList.add(subtask.getId());
-            }
-        }
-        return subTasksIdList;
     }
 }
