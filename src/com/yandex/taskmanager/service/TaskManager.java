@@ -8,6 +8,7 @@ import java.util.List;
 public interface TaskManager {
 
     LinkedList<Task> getHistory();
+
     Task getTask(int taskId);
 
     Epic getEpic(int epicId);
