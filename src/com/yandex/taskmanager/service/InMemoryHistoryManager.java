@@ -2,17 +2,18 @@ package com.yandex.taskmanager.service;
 
 import com.yandex.taskmanager.model.Task;
 
-import java.util.LinkedList;
+import java.util.ArrayList;
+import java.util.List;
 
 public class InMemoryHistoryManager implements HistoryManager {
 
-    private final LinkedList<Task> historyList = new LinkedList<>();
+    private final List<Task> historyList = new ArrayList<>();
 
     private final static int HISTORY_LIST_SIZE = 10;
 
     @Override
-    public LinkedList<Task> getHistory() {
-        return new LinkedList<>(historyList);
+    public List<Task> getHistory() {
+        return new ArrayList<>(historyList);
     }
 
     @Override
@@ -20,11 +21,9 @@ public class InMemoryHistoryManager implements HistoryManager {
         if (task == null) {
             return;
         }
-        if (historyList.size() < HISTORY_LIST_SIZE) {
-            historyList.addFirst(task);
-        } else {
-            historyList.addFirst(task);
-            historyList.removeLast();
+        if (historyList.size() >= HISTORY_LIST_SIZE) {
+            historyList.remove(9);
         }
+        historyList.add(0, task);
     }
 }

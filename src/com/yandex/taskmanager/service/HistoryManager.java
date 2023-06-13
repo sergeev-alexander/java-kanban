@@ -2,11 +2,11 @@ package com.yandex.taskmanager.service;
 
 import com.yandex.taskmanager.model.Task;
 
-import java.util.LinkedList;
+import java.util.List;
 
 public interface HistoryManager {
 
-    LinkedList<Task> getHistory();
+    List<Task> getHistory();
 
     void add(Task task);
 }

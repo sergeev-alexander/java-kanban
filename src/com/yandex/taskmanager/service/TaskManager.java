@@ -7,7 +7,7 @@ import java.util.List;
 
 public interface TaskManager {
 
-    LinkedList<Task> getHistory();
+    List<Task> getHistory();
 
     Task getTask(int taskId);
 
