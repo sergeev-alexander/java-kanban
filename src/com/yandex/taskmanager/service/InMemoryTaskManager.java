@@ -134,22 +134,27 @@ public class InMemoryTaskManager implements TaskManager {
         taskMap.clear();
         epicMap.clear();
         subtaskMap.clear();
+        historyManager.clear();
     }
 
     @Override
     public void deleteTaskById(int id) {
         if (taskMap.containsKey(id)) {
+            historyManager.remove(id);
             taskMap.remove(id);
         } else if (epicMap.containsKey(id)) {
             List<Integer> subTasksIdList = epicMap.get(id).getSubTasksIdList();
             if (!subTasksIdList.isEmpty()) {
                 for (int subtaskId : subTasksIdList) {
+                    historyManager.remove(subtaskId);
                     subtaskMap.remove(subtaskId);
                 }
             }
             epicMap.remove(id);
+            historyManager.remove(id);
         } else if (subtaskMap.containsKey(id)) {
             int epicId = subtaskMap.remove(id).getEpicId();
+            historyManager.remove(id);
             epicMap.get(epicId).removeSubtaskIdFromEpicList(id);
             updateEpicStatus(epicId);
         }
@@ -159,13 +164,25 @@ public class InMemoryTaskManager implements TaskManager {
     public void deleteTasksByType(Type type) {
         switch (type) {
             case TASK:
+                for (Task task : taskMap.values()) {
+                    historyManager.remove(task.getId());
+                }
                 taskMap.clear();
                 break;
             case EPIC:
+                for (Task task : epicMap.values()) {
+                    historyManager.remove(task.getId());
+                }
                 epicMap.clear();
+                for (Task task : subtaskMap.values()) {
+                    historyManager.remove(task.getId());
+                }
                 subtaskMap.clear();
                 break;
             case SUBTASK:
+                for (Task task : subtaskMap.values()) {
+                    historyManager.remove(task.getId());
+                }
                 subtaskMap.clear();
                 for (Epic epic : epicMap.values()) {
                     epic.getSubTasksIdList().clear();
