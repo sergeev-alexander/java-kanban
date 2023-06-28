@@ -11,15 +11,14 @@ public class InMemoryHistoryManager implements HistoryManager {
 
     private Node first;
     private Node last;
-    private int size = 0;
 
-    private final Map<Integer, Node> map = new HashMap<>();
+    private final Map<Integer, Node> historyViewsMap = new HashMap<>();
 
     @Override
     public List<Task> getHistory() {
-        List<Task> list = new ArrayList<>();
+        List<Task> list = new ArrayList<>(historyViewsMap.size());
         Node node = last;
-        for (int i = 0; i < size; i++) {
+        while (node != null){
             list.add(node.value);
             node = node.previous;
         }
@@ -28,29 +27,27 @@ public class InMemoryHistoryManager implements HistoryManager {
 
     @Override
     public void add(Task task) {
-        if (map.containsKey(task.getId())) {
+        if (historyViewsMap.containsKey(task.getId())) {
             remove(task.getId());
         }
-        if (size == 0) {
+        if (historyViewsMap.size() == 0) {
             Node node = new Node(null, task, null);
             first = node;
             last = node;
-            map.put(task.getId(), node);
         } else {
             Node newPreviousNode = last;
             last = new Node(newPreviousNode, task, null);
             newPreviousNode.next = last;
-            map.put(task.getId(), last);
         }
-        size++;
+        historyViewsMap.put(task.getId(), last);
     }
 
     @Override
     public void remove(int id) {
-        if (!map.containsKey(id)) {
+        Node deletingNode = historyViewsMap.remove(id);
+        if (deletingNode == null) {
             return;
         }
-        Node deletingNode = map.get(id);
         Node previousNode = deletingNode.previous;
         Node nextNode = deletingNode.next;
         if (nextNode != null) {
@@ -63,15 +60,25 @@ public class InMemoryHistoryManager implements HistoryManager {
         } else {
             first = nextNode;
         }
-        map.remove(id);
-        size--;
     }
 
     public void clear() {
         first = null;
         last = null;
-        size = 0;
-        map.clear();
+        historyViewsMap.clear();
+    }
+
+    private static class Node {
+
+        private Node previous;
+        private final Task value;
+        private Node next;
+
+        private Node(Node previous, Task value, Node next) {
+            this.previous = previous;
+            this.value = value;
+            this.next = next;
+        }
     }
 }
 
