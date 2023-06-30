@@ -18,7 +18,7 @@ public class InMemoryHistoryManager implements HistoryManager {
     public List<Task> getHistory() {
         List<Task> list = new ArrayList<>(historyViewsMap.size());
         Node node = last;
-        while (node != null){
+        while (node != null) {
             list.add(node.value);
             node = node.previous;
         }
@@ -27,9 +27,7 @@ public class InMemoryHistoryManager implements HistoryManager {
 
     @Override
     public void add(Task task) {
-        if (historyViewsMap.containsKey(task.getId())) {
-            remove(task.getId());
-        }
+        remove(task.getId());
         if (historyViewsMap.size() == 0) {
             Node node = new Node(null, task, null);
             first = node;
