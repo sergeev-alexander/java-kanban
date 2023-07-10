@@ -4,6 +4,7 @@ import com.yandex.taskmanager.model.*;
 import com.yandex.taskmanager.service.Managers;
 import com.yandex.taskmanager.service.TaskManager;
 
+import java.util.List;
 import java.util.Scanner;
 
 public class Interaction {
@@ -25,7 +26,11 @@ public class Interaction {
                     System.out.println(taskManager.getAllItems());
                     break;
                 case 3:
-                    System.out.println(taskManager.getTasksByType(userTypeChoice(userSelectTaskType())));
+                    if (taskManager.getAllEpics().isEmpty()) {
+                        System.out.println("There's no tasks to show!");
+                    } else {
+                        System.out.println(taskManager.getTasksByType(userTypeChoice(userSelectTaskType())));
+                    }
                     break;
                 case 4:
                     taskManager.deleteAllTasks();
@@ -34,7 +39,11 @@ public class Interaction {
                     taskManager.deleteTasksByType(userTypeChoice(userSelectTaskType()));
                     break;
                 case 6:
-                    System.out.println(taskManager.getTaskById(userSelectId()));
+                    if (taskManager.getAllEpics().isEmpty()) {
+                        System.out.println("There's no tasks to show!");
+                    } else {
+                        System.out.println(taskManager.getTaskById(userSelectId()));
+                    }
                     break;
                 case 7:
                     updateExistingTask();
@@ -43,7 +52,11 @@ public class Interaction {
                     taskManager.deleteTaskById(userSelectId());
                     break;
                 case 9:
-                    System.out.println(taskManager.getEpicsSubtasksById(userSelectEpicId()));
+                    if (taskManager.getAllEpics().isEmpty()) {
+                        System.out.println("Unable to show subtasks! There's no epics!");
+                    } else {
+                        System.out.println(taskManager.getEpicsSubtasksById(userSelectEpicId()));
+                    }
                     break;
                 case 10:
                     System.out.println(taskManager.getHistory());
@@ -96,18 +109,9 @@ public class Interaction {
             String input = sc.nextLine();
             int id = inputToInt(input);
             if (id > 0) {
-                for (Task task : taskManager.getAllTasks()) {
+                List<Task> allTasksList = taskManager.getAllTasks();
+                for (Task task : allTasksList) {
                     if (task.getId() == id) {
-                        return id;
-                    }
-                }
-                for (Epic epic : taskManager.getAllEpics()) {
-                    if (epic.getId() == id) {
-                        return id;
-                    }
-                }
-                for (Subtask subtask : taskManager.getAllSubtasks()) {
-                    if (subtask.getId() == id) {
                         return id;
                     }
                 }
@@ -227,7 +231,7 @@ public class Interaction {
     private void updateExistingTask() {
         while (true) {
             if (taskManager.getAllItems().isEmpty()) {
-                System.out.println("There is no tasks to change!");
+                System.out.println("There's no tasks to change!");
                 return;
             }
             System.out.println("Input task id you want to change!");
@@ -304,4 +308,5 @@ public class Interaction {
         subtask.setStatus(updateStatus());
         taskManager.updateSubtask(subtask);
     }
+
 }

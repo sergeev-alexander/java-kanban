@@ -7,9 +7,9 @@ import java.util.*;
 public class InMemoryTaskManager implements TaskManager {
 
     private int id = 0;
-    private final Map<Integer, Task> taskMap = new HashMap<>();
-    private final Map<Integer, Epic> epicMap = new HashMap<>();
-    private final Map<Integer, Subtask> subtaskMap = new HashMap<>();
+    protected final Map<Integer, Task> taskMap = new HashMap<>();
+    protected final Map<Integer, Epic> epicMap = new HashMap<>();
+    protected final Map<Integer, Subtask> subtaskMap = new HashMap<>();
 
     private final HistoryManager historyManager;
 
@@ -221,6 +221,16 @@ public class InMemoryTaskManager implements TaskManager {
     }
 
     private int createId() {
+        int maxId = 0;
+        List<Task> allTasks = getAllItems();
+        if (!allTasks.isEmpty()) {
+            for (Task task : allTasks) {
+                if (task.getId() > maxId) {
+                    maxId = task.getId();
+                }
+            }
+        }
+        id = maxId;
         return ++id;
     }
 
