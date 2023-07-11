@@ -1,15 +1,16 @@
 package com.yandex.taskmanager;
 
 import com.yandex.taskmanager.model.*;
-import com.yandex.taskmanager.service.Managers;
+import com.yandex.taskmanager.service.FileBackedTasksManager;
 import com.yandex.taskmanager.service.TaskManager;
 
+import java.io.File;
 import java.util.List;
 import java.util.Scanner;
 
 public class Interaction {
 
-    TaskManager taskManager = Managers.getDefaultTaskManager();
+    TaskManager taskManager = FileBackedTasksManager.loadFromFile(new File("Backup_file_1.csv"));
 
     Scanner sc = new Scanner(System.in);
 
@@ -39,7 +40,7 @@ public class Interaction {
                     taskManager.deleteTasksByType(userTypeChoice(userSelectTaskType()));
                     break;
                 case 6:
-                    if (taskManager.getAllEpics().isEmpty()) {
+                    if (taskManager.getAllItems().isEmpty()) {
                         System.out.println("There's no tasks to show!");
                     } else {
                         System.out.println(taskManager.getTaskById(userSelectId()));
@@ -109,7 +110,7 @@ public class Interaction {
             String input = sc.nextLine();
             int id = inputToInt(input);
             if (id > 0) {
-                List<Task> allTasksList = taskManager.getAllTasks();
+                List<Task> allTasksList = taskManager.getAllItems();
                 for (Task task : allTasksList) {
                     if (task.getId() == id) {
                         return id;

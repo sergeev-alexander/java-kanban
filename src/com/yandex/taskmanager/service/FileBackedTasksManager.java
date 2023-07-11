@@ -1,6 +1,7 @@
 package com.yandex.taskmanager.service;
 
 import com.yandex.taskmanager.model.*;
+import com.yandex.taskmanager.exceptions.ManagerSaveException;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -9,12 +10,21 @@ import java.util.List;
 
 public class FileBackedTasksManager extends InMemoryTaskManager {
 
-    private final File CSV_BACKUP_FILE = new File("BackupDirectory/CSV_Backup.csv");
+    private final File backupFile;
 
-    public FileBackedTasksManager(HistoryManager historyManager) {
+    public FileBackedTasksManager(HistoryManager historyManager, File file) {
         super(historyManager);
-        backup(load(CSV_BACKUP_FILE));
+        File backupFile = new File("BackupDirectory", String.valueOf(file));
+        if (backupFile.exists()) {
+            this.backupFile = backupFile;
+            backup(load(backupFile));
+        } else {
+            this.backupFile = createNewBackupFile(backupFile);
+        }
+    }
 
+    public static FileBackedTasksManager loadFromFile(File file) {
+        return new FileBackedTasksManager(Managers.getDefaultHistoryManager(), file);
     }
 
     @Override
@@ -92,14 +102,16 @@ public class FileBackedTasksManager extends InMemoryTaskManager {
         save();
     }
 
-    @Override
-    public Task getTaskById(int id) {
-        Task task = super.getTaskById(id);
-        save();
-        return task;
+    private File createNewBackupFile(File newBackupFile) throws ManagerSaveException {
+        try {
+            newBackupFile.createNewFile();
+            return newBackupFile;
+        } catch (IOException e) {
+            throw new ManagerSaveException("Unable to create new file", e.getCause());
+        }
     }
 
-    private List<String> load(File file) {
+    private List<String> load(File file) throws ManagerSaveException {
         try (BufferedReader reader = new BufferedReader(new FileReader(file, StandardCharsets.UTF_8))) {
             List<String> lines = new ArrayList<>();
             while (reader.ready()) {
@@ -107,14 +119,14 @@ public class FileBackedTasksManager extends InMemoryTaskManager {
             }
             return lines;
         } catch (IOException e) {
-            throw new Error(new ManagerSaveException());
+            throw new ManagerSaveException("Unable to load from file!", e.getCause());
         }
     }
 
     private void backup(List<String> lines) {
         if (lines.isEmpty()) {
             return;
-        }
+        } // невозможно поставить lines.size() - 2, т.к. когда в файле нет просмотров, но есть задачи - последняя задача не считывается
         for (int i = 1; i < lines.size() - 1; i++) {
             String[] line = lines.get(i).split(",");
             if (line.length > 1) {
@@ -157,7 +169,7 @@ public class FileBackedTasksManager extends InMemoryTaskManager {
         if (!lines.get(lines.size() - 1).isEmpty() || !lines.get(lines.size() - 1).isBlank()) {
             String[] historyLine = lines.get(lines.size() - 1).split(",");
             for (int k = historyLine.length - 1; k >= 0; k--) {
-                getTaskById(Integer.parseInt(historyLine[k]));
+                historyManager.add(getTaskById(Integer.parseInt(historyLine[k])));
             }
         }
     }
@@ -175,10 +187,10 @@ public class FileBackedTasksManager extends InMemoryTaskManager {
     }
 
     private void save() {
-        try (FileWriter writer = new FileWriter(CSV_BACKUP_FILE, StandardCharsets.UTF_8)) {
+        try (FileWriter writer = new FileWriter(backupFile, StandardCharsets.UTF_8)) {
             writer.write(createCSV());
         } catch (IOException e) {
-            throw new Error(new ManagerSaveException());
+            throw new ManagerSaveException("Unable to save file!", e.getCause());
         }
     }
 
