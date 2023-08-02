@@ -1,5 +1,6 @@
-package com.yandex.taskmanager.model;
+package taskmanager.model;
 
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -7,6 +8,7 @@ import java.util.Objects;
 public class Epic extends Task {
 
     private List<Integer> subTasksIdList = new ArrayList<>();
+    private ZonedDateTime endTime;
 
     @Override
     public Type getType() {
@@ -29,6 +31,14 @@ public class Epic extends Task {
         subTasksIdList.remove((Integer) subtasksId);
     }
 
+    public void setEndTime(ZonedDateTime endTime) {
+        this.endTime = endTime;
+    }
+
+    @Override
+    public ZonedDateTime getEndTime() {
+        return this.endTime;
+    }
 
     @Override
     public boolean equals(Object o) {
@@ -45,12 +55,15 @@ public class Epic extends Task {
 
     @Override
     public String toString() {
-        StringBuilder result = new StringBuilder(String.valueOf(getId()) + ','
-                + getType().toString() + ','
-                + getTitle() + ','
-                + getStatus().toString() + ','
-                + getDescription() + ','
-                + "-,");
+        StringBuilder result = new StringBuilder(String.format("%s,%s,%s,%s,%s,%s,%s,%s,-,",
+                getId(),
+                getType(),
+                getTitle(),
+                getStatus(),
+                getDescription(),
+                getStartTime(),
+                getDuration(),
+                getEndTime()));
         for (int subtask : subTasksIdList) {
             result.append(subtask).append(",");
         }

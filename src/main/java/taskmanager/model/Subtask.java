@@ -1,4 +1,4 @@
-package com.yandex.taskmanager.model;
+package taskmanager.model;
 
 import java.util.Objects;
 
@@ -22,7 +22,7 @@ public class Subtask extends Task {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (!(o instanceof Subtask)) return false;
         if (!super.equals(o)) return false;
         Subtask subtask = (Subtask) o;
         return epicId == subtask.epicId;
@@ -35,13 +35,16 @@ public class Subtask extends Task {
 
     @Override
     public String toString() {
-        return String.valueOf(getId()) + ','
-                + getType().toString() + ','
-                + getTitle() + ','
-                + getStatus().toString() + ','
-                + getDescription() + ','
-                + getEpicId() + ','
-                + "-,"
-                + "\n";
+        return String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
+                getId(),
+                getType(),
+                getTitle(),
+                getStatus(),
+                getDescription(),
+                getStartTime(),
+                getDuration(),
+                getEndTime(),
+                getEpicId());
     }
+
 }

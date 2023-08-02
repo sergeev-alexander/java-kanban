@@ -1,6 +1,6 @@
-package com.yandex.taskmanager.service;
+package taskmanager.service;
 
-import com.yandex.taskmanager.model.Task;
+import taskmanager.model.Task;
 
 import java.util.List;
 
