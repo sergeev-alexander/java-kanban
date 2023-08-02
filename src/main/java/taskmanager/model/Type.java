@@ -1,4 +1,4 @@
-package com.yandex.taskmanager.model;
+package taskmanager.model;
 
 public enum Type {
 

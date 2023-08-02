@@ -1,18 +1,30 @@
-package com.yandex.taskmanager;
+package taskmanager;
 
-import com.yandex.taskmanager.model.*;
-import com.yandex.taskmanager.service.FileBackedTasksManager;
-import com.yandex.taskmanager.service.TaskManager;
+import taskmanager.exceptions.AddingAndUpdatingException;
+import taskmanager.exceptions.NoSuchTaskException;
+import taskmanager.model.*;
+import taskmanager.service.FileBackedTasksManager;
+import taskmanager.service.TaskManager;
 
 import java.io.File;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Scanner;
 
 public class Interaction {
 
-    TaskManager taskManager = FileBackedTasksManager.loadFromFile(new File("Backup_file_1.csv"));
+    public static DateTimeFormatter DT_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
+    public static ZoneId ZONE_ID = ZoneId.of("Europe/Moscow");
 
+    TaskManager taskManager = FileBackedTasksManager.loadFromFile(new File("Backup_file_1.csv"));
     Scanner sc = new Scanner(System.in);
+
+    public Interaction() throws NoSuchTaskException, AddingAndUpdatingException {
+    }
 
     public void interaction() {
         while (true) {
@@ -27,40 +39,59 @@ public class Interaction {
                     System.out.println(taskManager.getAllItems());
                     break;
                 case 3:
-                    if (taskManager.getAllEpics().isEmpty()) {
+                    if (taskManager.getAllItems().isEmpty()) {
                         System.out.println("There's no tasks to show!");
                     } else {
                         System.out.println(taskManager.getTasksByType(userTypeChoice(userSelectTaskType())));
                     }
                     break;
                 case 4:
-                    taskManager.deleteAllTasks();
+                    taskManager.deleteAllItems();
                     break;
                 case 5:
-                    taskManager.deleteTasksByType(userTypeChoice(userSelectTaskType()));
+                    try {
+                        taskManager.deleteTasksByType(userTypeChoice(userSelectTaskType()));
+                    } catch (NoSuchTaskException e) {
+                        System.out.println(e.getMessage());
+                    }
                     break;
                 case 6:
                     if (taskManager.getAllItems().isEmpty()) {
                         System.out.println("There's no tasks to show!");
                     } else {
-                        System.out.println(taskManager.getTaskById(userSelectId()));
+                        try {
+                            System.out.println(taskManager.getTaskById(userSelectId()));
+                        } catch (NoSuchTaskException e) {
+                            System.out.println(e.getMessage());
+                        }
                     }
                     break;
                 case 7:
                     updateExistingTask();
                     break;
                 case 8:
-                    taskManager.deleteTaskById(userSelectId());
+                    try {
+                        taskManager.deleteTaskById(userSelectId());
+                    } catch (NoSuchTaskException e) {
+                        System.out.println(e.getMessage());
+                    }
                     break;
                 case 9:
                     if (taskManager.getAllEpics().isEmpty()) {
                         System.out.println("Unable to show subtasks! There's no epics!");
                     } else {
-                        System.out.println(taskManager.getEpicsSubtasksById(userSelectEpicId()));
+                        try {
+                            System.out.println(taskManager.getEpicsSubtasksById(userSelectEpicId()));
+                        } catch (NoSuchTaskException e) {
+                            System.out.println(e.getMessage());
+                        }
                     }
                     break;
                 case 10:
                     System.out.println(taskManager.getHistory());
+                    break;
+                case 11:
+                    System.out.println(taskManager.getPrioritizedTasks());
                     break;
                 case 0:
                     System.out.println("Good bye!");
@@ -85,6 +116,7 @@ public class Interaction {
                 "\n(8)  - Delete task by id" +
                 "\n(9)  - Show subtasks of an epic" +
                 "\n(10) - Show history of views" +
+                "\n(11) - Show PrioritizedTasks list" +
                 "\n(0) - Exit app");
     }
 
@@ -186,8 +218,22 @@ public class Interaction {
         System.out.println("Insert task description!");
         String description = sc.nextLine();
         task.setDescription(description);
+        System.out.println("Insert task startDateTime in format \"dd.MM.yyyy HH:mm\"");
+        String startDateTime = sc.nextLine();
+        try {
+            task.setStartTime(ZonedDateTime.of(LocalDateTime.parse(startDateTime, DT_FORMATTER), ZONE_ID));
+        } catch (DateTimeParseException e) {
+            System.out.println("Wrong DateTime format! Try again!");
+        }
+        System.out.println("Insert task duration (min)");
+        String durationString = sc.nextLine();
+        task.setDuration(inputToInt(durationString));
         task.setStatus(Status.NEW);
-        taskManager.addNewTask(task);
+        try {
+            taskManager.addNewTask(task);
+        } catch (AddingAndUpdatingException | NoSuchTaskException e) {
+            System.out.println(e.getMessage());
+        }
     }
 
     private void addNewEpic() {
@@ -199,7 +245,11 @@ public class Interaction {
         String description = sc.nextLine();
         epic.setDescription(description);
         epic.setStatus(Status.NEW);
-        taskManager.addNewEpic(epic);
+        try {
+            taskManager.addNewEpic(epic);
+        } catch (AddingAndUpdatingException | NoSuchTaskException e) {
+            System.out.println(e.getMessage());
+        }
     }
 
     private void addNewSubtask() {
@@ -212,8 +262,22 @@ public class Interaction {
         System.out.println("Insert subtask description!");
         String description = sc.nextLine();
         subtask.setDescription(description);
+        System.out.println("Insert subtask startDateTime in format \"dd.MM.yyyy HH:mm\"");
+        String startDateTime = sc.nextLine();
+        try {
+            subtask.setStartTime(ZonedDateTime.of(LocalDateTime.parse(startDateTime, DT_FORMATTER), ZONE_ID));
+        } catch (DateTimeParseException e) {
+            System.out.println("Wrong DateTime format! Try again!");
+        }
+        System.out.println("Insert subtask duration (min)");
+        String durationString = sc.nextLine();
+        subtask.setDuration(inputToInt(durationString));
         subtask.setStatus(Status.NEW);
-        taskManager.addNewSubtask(subtask);
+        try {
+            taskManager.addNewSubtask(subtask);
+        } catch (AddingAndUpdatingException | NoSuchTaskException e) {
+            System.out.println(e.getMessage());
+        }
     }
 
     private Type userTypeChoice(int command) {
@@ -238,18 +302,22 @@ public class Interaction {
             System.out.println("Input task id you want to change!");
             String userInput = sc.nextLine();
             int id = inputToInt(userInput);
-            if (taskManager.getTasksByType(Type.TASK).contains(taskManager.getTaskById(id))) {
-                updateTask(taskManager.getTaskById(id));
-                return;
-            } else if (taskManager.getTasksByType(Type.EPIC).contains(taskManager.getTaskById(id))) {
-                updateEpic((Epic) taskManager.getTaskById(id));
-                return;
-            } else if (taskManager.getTasksByType(Type.SUBTASK).contains(taskManager.getTaskById(id))) {
-                updateSubtask((Subtask) taskManager.getTaskById(id));
-                return;
-            } else {
-                System.out.println("There's no task with [" + userInput + "] id!" +
-                        "\nTry again!");
+            try {
+                if (taskManager.getTasksByType(Type.TASK).contains(taskManager.getTaskById(id))) {
+                    updateTask(taskManager.getTaskById(id));
+                    return;
+                } else if (taskManager.getTasksByType(Type.EPIC).contains(taskManager.getTaskById(id))) {
+                    updateEpic((Epic) taskManager.getTaskById(id));
+                    return;
+                } else if (taskManager.getTasksByType(Type.SUBTASK).contains(taskManager.getTaskById(id))) {
+                    updateSubtask((Subtask) taskManager.getTaskById(id));
+                    return;
+                } else {
+                    System.out.println("There's no task with [" + userInput + "] id!" +
+                            "\nTry again!");
+                }
+            } catch (NoSuchTaskException e) {
+                System.out.println(e.getMessage());
             }
         }
     }
@@ -285,7 +353,21 @@ public class Interaction {
         String description = sc.nextLine();
         task.setDescription(description);
         task.setStatus(updateStatus());
-        taskManager.updateTask(task);
+        System.out.println("Insert new task startDateTime in format \"dd.MM.yyyy HH:mm\"");
+        String startDateTime = sc.nextLine();
+        try {
+            task.setStartTime(ZonedDateTime.of(LocalDateTime.parse(startDateTime, DT_FORMATTER), ZONE_ID));
+        } catch (DateTimeParseException e) {
+            System.out.println("Wrong DateTime format! Try again!");
+        }
+        System.out.println("Insert new task duration (min)");
+        String durationString = sc.nextLine();
+        task.setDuration(inputToInt(durationString));
+        try {
+            taskManager.updateTask(task);
+        } catch (AddingAndUpdatingException | NoSuchTaskException e) {
+            System.out.println(e.getMessage());
+        }
     }
 
     private void updateEpic(Epic epic) {
@@ -295,8 +377,11 @@ public class Interaction {
         System.out.println("Insert new epic description!");
         String description = sc.nextLine();
         epic.setDescription(description);
-        epic.setStatus(updateStatus());
-        taskManager.updateEpic(epic);
+        try {
+            taskManager.updateEpic(epic);
+        } catch (AddingAndUpdatingException | NoSuchTaskException e) {
+            System.out.println(e.getMessage());
+        }
     }
 
     private void updateSubtask(Subtask subtask) {
@@ -306,8 +391,22 @@ public class Interaction {
         System.out.println("Insert new subtask description!");
         String description = sc.nextLine();
         subtask.setDescription(description);
+        System.out.println("Insert new subtask startDateTime in format \"dd.MM.yyyy HH:mm\"");
+        String startDateTime = sc.nextLine();
+        try {
+            subtask.setStartTime(ZonedDateTime.of(LocalDateTime.parse(startDateTime, DT_FORMATTER), ZONE_ID));
+        } catch (DateTimeParseException e) {
+            System.out.println("Wrong DateTime format! Try again!");
+        }
+        System.out.println("Insert new subtask duration (min)");
+        String durationString = sc.nextLine();
+        subtask.setDuration(inputToInt(durationString));
         subtask.setStatus(updateStatus());
-        taskManager.updateSubtask(subtask);
+        try {
+            taskManager.updateSubtask(subtask);
+        } catch (AddingAndUpdatingException | NoSuchTaskException e) {
+            System.out.println(e.getMessage());
+        }
     }
 
 }

@@ -1,10 +1,13 @@
-package com.yandex.taskmanager.service;
+package taskmanager.service;
 
-import com.yandex.taskmanager.model.*;
-import com.yandex.taskmanager.exceptions.ManagerSaveException;
+import taskmanager.exceptions.AddingAndUpdatingException;
+import taskmanager.exceptions.ManagerSaveException;
+import taskmanager.exceptions.NoSuchTaskException;
+import taskmanager.model.*;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -12,7 +15,7 @@ public class FileBackedTasksManager extends InMemoryTaskManager {
 
     private final File backupFile;
 
-    public FileBackedTasksManager(HistoryManager historyManager, File file) {
+    public FileBackedTasksManager(HistoryManager historyManager, File file) throws NoSuchTaskException, AddingAndUpdatingException {
         super(historyManager);
         File backupFile = new File("BackupDirectory", String.valueOf(file));
         if (backupFile.exists()) {
@@ -23,81 +26,81 @@ public class FileBackedTasksManager extends InMemoryTaskManager {
         }
     }
 
-    public static FileBackedTasksManager loadFromFile(File file) {
+    public static FileBackedTasksManager loadFromFile(File file) throws NoSuchTaskException, AddingAndUpdatingException {
         return new FileBackedTasksManager(Managers.getDefaultHistoryManager(), file);
     }
 
     @Override
-    public Task getTask(int taskId) {
+    public Task getTask(int taskId) throws NoSuchTaskException {
         Task task = super.getTask(taskId);
         save();
         return task;
     }
 
     @Override
-    public Epic getEpic(int epicId) {
+    public Epic getEpic(int epicId) throws NoSuchTaskException {
         Epic epic = super.getEpic(epicId);
         save();
         return epic;
     }
 
     @Override
-    public Subtask getSubtask(int subtaskId) {
+    public Subtask getSubtask(int subtaskId) throws NoSuchTaskException {
         Subtask subtask = super.getSubtask(subtaskId);
         save();
         return subtask;
     }
 
     @Override
-    public void updateTask(Task newTask) {
+    public void updateTask(Task newTask) throws AddingAndUpdatingException, NoSuchTaskException {
         super.updateTask(newTask);
         save();
     }
 
     @Override
-    public void addNewTask(Task task) {
+    public void addNewTask(Task task) throws AddingAndUpdatingException, NoSuchTaskException {
         super.addNewTask(task);
         save();
     }
 
     @Override
-    public void updateEpic(Epic newEpic) {
+    public void updateEpic(Epic newEpic) throws AddingAndUpdatingException, NoSuchTaskException {
         super.updateEpic(newEpic);
         save();
     }
 
     @Override
-    public void addNewEpic(Epic epic) {
+    public void addNewEpic(Epic epic) throws AddingAndUpdatingException, NoSuchTaskException {
         super.addNewEpic(epic);
         save();
     }
 
     @Override
-    public void updateSubtask(Subtask newSubtask) {
+    public void updateSubtask(Subtask newSubtask) throws AddingAndUpdatingException, NoSuchTaskException {
         super.updateSubtask(newSubtask);
         save();
     }
 
     @Override
-    public void addNewSubtask(Subtask subtask) {
+    public void addNewSubtask(Subtask subtask) throws AddingAndUpdatingException, NoSuchTaskException {
         super.addNewSubtask(subtask);
         save();
     }
 
     @Override
-    public void deleteAllTasks() {
-        super.deleteAllTasks();
+    public void deleteAllItems() {
+        super.deleteAllItems();
         save();
     }
 
     @Override
-    public void deleteTaskById(int id) {
+    public void deleteTaskById(int id) throws NoSuchTaskException {
         super.deleteTaskById(id);
         save();
     }
 
     @Override
-    public void deleteTasksByType(Type type) {
+    public void deleteTasksByType(Type type) throws NoSuchTaskException {
         super.deleteTasksByType(type);
         save();
     }
@@ -123,10 +126,10 @@ public class FileBackedTasksManager extends InMemoryTaskManager {
         }
     }
 
-    private void backup(List<String> lines) {
+    private void backup(List<String> lines) throws NoSuchTaskException, AddingAndUpdatingException {
         if (lines.isEmpty()) {
             return;
-        } // невозможно поставить lines.size() - 2, т.к. когда в файле нет просмотров, но есть задачи - последняя задача не считывается
+        }
         for (int i = 1; i < lines.size() - 1; i++) {
             String[] line = lines.get(i).split(",");
             if (line.length > 1) {
@@ -137,7 +140,12 @@ public class FileBackedTasksManager extends InMemoryTaskManager {
                         task.setTitle(line[2]);
                         task.setStatus(identifyStatus(line[3]));
                         task.setDescription(line[4]);
+                        if (!line[5].equals("null")) {
+                            task.setStartTime(ZonedDateTime.parse(line[5]));
+                        }
+                        task.setDuration(Long.parseLong(line[6]));
                         taskMap.put(task.getId(), task);
+                        prioritySet.add(task);
                         break;
                     case "EPIC":
                         Epic epic = new Epic();
@@ -145,14 +153,22 @@ public class FileBackedTasksManager extends InMemoryTaskManager {
                         epic.setTitle(line[2]);
                         epic.setStatus(identifyStatus(line[3]));
                         epic.setDescription(line[4]);
+                        if (!line[5].equals("null")) {
+                            epic.setStartTime(ZonedDateTime.parse(line[5]));
+                        }
+                        epic.setDuration(Long.parseLong(line[6]));
+                        if (!line[7].equals("null")) {
+                            epic.setEndTime(ZonedDateTime.parse(line[7]));
+                        }
                         List<Integer> subtaskList = new ArrayList<>();
-                        for (int j = 6; j < line.length; j++) {
+                        for (int j = 9; j < line.length; j++) {
                             if (!line[j].isEmpty()) {
                                 subtaskList.add(Integer.parseInt(line[j]));
                             }
                         }
                         epic.setSubTasksIdList(subtaskList);
                         epicMap.put(epic.getId(), epic);
+                        prioritySet.add(epic);
                         break;
                     case "SUBTASK":
                         Subtask subtask = new Subtask();
@@ -160,8 +176,13 @@ public class FileBackedTasksManager extends InMemoryTaskManager {
                         subtask.setTitle(line[2]);
                         subtask.setStatus(identifyStatus(line[3]));
                         subtask.setDescription(line[4]);
-                        subtask.setEpicId(Integer.parseInt(line[5]));
+                        if (!line[5].equals("null")) {
+                            subtask.setStartTime(ZonedDateTime.parse(line[5]));
+                        }
+                        subtask.setDuration(Long.parseLong(line[6]));
+                        subtask.setEpicId(Integer.parseInt(line[8]));
                         subtaskMap.put(subtask.getId(), subtask);
+                        prioritySet.add(subtask);
                         break;
                 }
             }
@@ -198,7 +219,7 @@ public class FileBackedTasksManager extends InMemoryTaskManager {
         List<Task> taskList = getAllItems();
         StringBuilder CSV = new StringBuilder();
         if (!taskList.isEmpty()) {
-            CSV.append("id,type,name,status,description,epic,subtasks\n");
+            CSV.append("id,type,name,status,description,startTime,duration,endTime,epic,subtasks\n");
             for (Task task : taskList) {
                 CSV.append(task.toString());
             }
