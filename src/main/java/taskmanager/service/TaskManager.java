@@ -1,7 +1,5 @@
 package taskmanager.service;
 
-import taskmanager.exceptions.AddingAndUpdatingException;
-import taskmanager.exceptions.NoSuchTaskException;
 import taskmanager.model.Epic;
 import taskmanager.model.Subtask;
 import taskmanager.model.Task;
@@ -13,23 +11,23 @@ public interface TaskManager {
 
     List<Task> getHistory();
 
-    Task getTask(int taskId) throws NoSuchTaskException;
+    Task getTask(int taskId);
 
-    Epic getEpic(int epicId) throws NoSuchTaskException;
+    Epic getEpic(int epicId);
 
-    Subtask getSubtask(int subtaskId) throws NoSuchTaskException;
+    Subtask getSubtask(int subtaskId);
 
-    void updateTask(Task newTask) throws AddingAndUpdatingException, NoSuchTaskException;
+    void updateTask(Task newTask);
 
-    void addNewTask(Task task) throws AddingAndUpdatingException, NoSuchTaskException;
+    void addNewTask(Task task);
 
-    void updateEpic(Epic newEpic) throws AddingAndUpdatingException, NoSuchTaskException;
+    void updateEpic(Epic newEpic);
 
-    void addNewEpic(Epic epic) throws AddingAndUpdatingException, NoSuchTaskException;
+    void addNewEpic(Epic epic);
 
-    void updateSubtask(Subtask newSubtask) throws AddingAndUpdatingException, NoSuchTaskException;
+    void updateSubtask(Subtask newSubtask);
 
-    void addNewSubtask(Subtask subtask) throws AddingAndUpdatingException, NoSuchTaskException;
+    void addNewSubtask(Subtask subtask);
 
     List<Task> getAllItems();
 
@@ -43,13 +41,13 @@ public interface TaskManager {
 
     void deleteAllItems();
 
-    void deleteTaskById(int id) throws NoSuchTaskException;
+    void deleteTaskById(int id);
 
-    void deleteTasksByType(Type type) throws NoSuchTaskException;
+    void deleteTasksByType(Type type);
 
-    Task getTaskById(int id) throws NoSuchTaskException;
+    Task getTaskById(int id);
 
-    List<Subtask> getEpicsSubtasksById(int epicId) throws NoSuchTaskException;
+    List<Subtask> getEpicsSubtasksById(int epicId);
 
     List<Task> getPrioritizedTasks();
 

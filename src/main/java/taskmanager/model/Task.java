@@ -78,18 +78,23 @@ public class Task {
         if (this == o) return true;
         if (!(o instanceof Task)) return false;
         Task task = (Task) o;
-        return id == task.id
-                && duration == task.duration
-                && status == task.status
-                && Objects.equals(title, task.title)
-                && Objects.equals(description, task.description)
-                && Objects.equals(startTime, task.startTime)
-                && Objects.equals(getEndTime(), task.getEndTime());
+        if (id != task.id) return false;
+        if (duration != task.duration) return false;
+        if (status != task.status) return false;
+        if (!Objects.equals(title, task.title)) return false;
+        if (!Objects.equals(description, task.description)) return false;
+        return Objects.equals(startTime, task.startTime);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, status, title, description);
+        int result = id;
+        result = 31 * result + (status != null ? status.hashCode() : 0);
+        result = 31 * result + (title != null ? title.hashCode() : 0);
+        result = 31 * result + (description != null ? description.hashCode() : 0);
+        result = 31 * result + (startTime != null ? startTime.hashCode() : 0);
+        result = 31 * result + (int) (duration ^ (duration >>> 32));
+        return result;
     }
 
     @Override

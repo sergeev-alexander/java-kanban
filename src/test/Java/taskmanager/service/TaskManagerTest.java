@@ -1,36 +1,58 @@
 package taskmanager.service;
 
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import taskmanager.exceptions.AddingAndUpdatingException;
-import taskmanager.exceptions.NoSuchTaskException;
 import taskmanager.model.*;
+import taskmanager.exceptions.NoSuchTaskException;
+import taskmanager.exceptions.AddingAndUpdatingException;
 
 import java.io.File;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class TaskManagerTest {
-
-    TaskManager manager = Managers.getDefaultTaskManager();
+abstract class TaskManagerTest<T extends TaskManager> {
 
     public static DateTimeFormatter DT_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
     public static ZoneId ZONE_ID = ZoneId.of("Europe/Moscow");
 
+    private T manager;
+
+    abstract T getManager();
+
     @BeforeEach
-    void setUp() {
+    public void setUp() {
+        manager = getManager();
         manager.deleteAllItems();
     }
 
-    @AfterEach
-    void tearDown() {
-        manager.deleteAllItems();
+    /**
+     * Загрузка менеджера со стандартным поведением.
+     */
+    @Test
+    public void whenTryToLoadFromFileAllLoadedShouldBeEqualToCurrentManager() {
+        List<Task> addingTasks = createSomeTasks();
+        manager.addNewTask(addingTasks.get(0));
+        manager.addNewEpic((Epic) addingTasks.get(1));
+        manager.addNewSubtask((Subtask) addingTasks.get(2));
+        manager.getTaskById(1);
+        manager.getTaskById(2);
+        manager.getTaskById(3);
+        TaskManager loadedManager;
+        if (manager instanceof InMemoryTaskManagerTest) {
+            loadedManager = FileBackedTasksManager.loadFromFile(new File("Test_backup_file.csv"));
+        } else {
+            loadedManager = manager;
+        }
+        assertEquals(manager.getAllItems(), loadedManager.getAllItems(), "All items are not equal to loaded items!");
+        assertEquals(manager.getHistory(), loadedManager.getHistory(), "History is not equal to loaded history!");
+        assertEquals(manager.getPrioritizedTasks(), loadedManager.getPrioritizedTasks(),
+                "Prioritized list is not equal to loaded prioritized list!");
     }
 
     /**
@@ -38,23 +60,15 @@ public class TaskManagerTest {
      */
     @Test
     void getHistory() {
-        Task task1 = new Task();
-        Epic epic2 = new Epic();
-        Subtask subtask3 = new Subtask();
-        subtask3.setEpicId(2);
-        List<Task> controlTaskList = List.of(epic2, subtask3, task1);
-        try {
-            manager.addNewTask(task1);
-            manager.addNewEpic(epic2);
-            manager.addNewSubtask(subtask3);
-            manager.getTaskById(1);
-            manager.getTaskById(3);
-            manager.getTaskById(2);
-        } catch (AddingAndUpdatingException | NoSuchTaskException e) {
-            System.out.println(e.getMessage());
-        }
-        List<Task> receivedTaskList = manager.getHistory();
-        assertEquals(controlTaskList, receivedTaskList, "Received history is wrong or absent!");
+        List<Task> addingTasks = createSomeTasks();
+        manager.addNewTask(addingTasks.get(0));
+        manager.addNewEpic((Epic) addingTasks.get(1));
+        manager.addNewSubtask((Subtask) addingTasks.get(2));
+        manager.getTaskById(3);
+        manager.getTaskById(2);
+        manager.getTaskById(1);
+        List<Task> controllList = manager.getAllItems();
+        assertEquals(controllList, manager.getHistory(), "Received history is wrong!");
     }
 
     /**
@@ -62,87 +76,12 @@ public class TaskManagerTest {
      */
     @Test
     void whenTryToGetHistoryOfViewsInTheirAbsenceShouldReceiveAnEmptyList() {
-        Task task1 = new Task();
-        Epic epic2 = new Epic();
-        Subtask subtask3 = new Subtask();
-        subtask3.setEpicId(2);
-        try {
-            manager.addNewTask(task1);
-            manager.addNewEpic(epic2);
-            manager.addNewSubtask(subtask3);
-        } catch (AddingAndUpdatingException | NoSuchTaskException e) {
-            System.out.println(e.getMessage());
-        }
+        List<Task> addingTasks = createSomeTasks();
+        manager.addNewTask(addingTasks.get(0));
+        manager.addNewEpic((Epic) addingTasks.get(1));
+        manager.addNewSubtask((Subtask) addingTasks.get(2));
         List<Task> receivedHistoryList = manager.getHistory();
         assertTrue(receivedHistoryList.isEmpty(), "Received not empty history list");
-    }
-
-    /**
-     * Получение истории просмотров и задач из backup файла со стандарным поведением.
-     */
-    @Test
-    void whenUseLoadingFromFileHistoryListShouldBeLoadedCorrectly() {
-        Task task1 = new Task();
-        Epic epic2 = new Epic();
-        Subtask subtask3 = new Subtask();
-        subtask3.setEpicId(2);
-        List<Task> controlHistoryList = null;
-        try {
-            TaskManager fileBackedTasksManager =
-                    Managers.getDefaultTaskManager(new File("Test_backup_file.csv"));
-            fileBackedTasksManager.deleteAllItems();
-            fileBackedTasksManager.addNewTask(task1);
-            fileBackedTasksManager.addNewEpic(epic2);
-            fileBackedTasksManager.addNewSubtask(subtask3);
-            fileBackedTasksManager.getTaskById(1);
-            fileBackedTasksManager.getTaskById(3);
-            fileBackedTasksManager.getTaskById(2);
-            controlHistoryList = fileBackedTasksManager.getHistory();
-        } catch (AddingAndUpdatingException | NoSuchTaskException e) {
-            System.out.println(e.getMessage());
-        }
-        manager.deleteAllItems();
-        List<Task> mustBeEmptyTaskList = manager.getAllTasks();
-        List<Task> mustBeEmptyHistoryList = manager.getHistory();
-        assertTrue(mustBeEmptyHistoryList.isEmpty(), "History list is not empty!");
-        assertTrue(mustBeEmptyTaskList.isEmpty(), "Task list is not empty!");
-        List<Task> receivedFromBackupHistoryList = null;
-        try {
-            FileBackedTasksManager anotherFileBackedTasksManager =
-                    FileBackedTasksManager.loadFromFile(new File("Test_backup_file.csv"));
-            receivedFromBackupHistoryList = anotherFileBackedTasksManager.getHistory();
-        } catch (AddingAndUpdatingException | NoSuchTaskException e) {
-            System.out.println(e.getMessage());
-        }
-        assert receivedFromBackupHistoryList != null;
-        assert controlHistoryList != null;
-        assertEquals(controlHistoryList.get(0).getId(), receivedFromBackupHistoryList.get(0).getId(),
-                "Loaded history list is wrong or absent!");
-        assertEquals(controlHistoryList.get(1).getId(), receivedFromBackupHistoryList.get(1).getId(),
-                "Loaded history list is wrong or absent!");
-        assertEquals(controlHistoryList.get(2).getId(), receivedFromBackupHistoryList.get(2).getId(),
-                "Loaded history list is wrong or absent!");
-
-    }
-
-    /**
-     * Получение истории просмотров и задач из backup файла с пустым файлом.
-     */
-    @Test
-    void whenUseLoadingFromFileHistoryInItsAbsenceHistoryListShouldBeEmpty() {
-        List<Task> receivedHistoryList = null;
-        try {
-            TaskManager fileBackedTaskManager =
-                    Managers.getDefaultTaskManager(new File("Test_backup_file.csv"));
-            fileBackedTaskManager.deleteAllItems();
-            TaskManager anotherFileBackedTaskManager =
-                    FileBackedTasksManager.loadFromFile(new File("Test_backup_file.csv"));
-            receivedHistoryList = anotherFileBackedTaskManager.getHistory();
-        } catch (AddingAndUpdatingException | NoSuchTaskException e) {
-            System.out.println(e.getMessage());
-        }
-        assert receivedHistoryList != null;
-        assertTrue(receivedHistoryList.isEmpty());
     }
 
     /**
@@ -150,25 +89,15 @@ public class TaskManagerTest {
      */
     @Test
     void whenUseLoadingFromFileAllTaskFieldsShouldBeLoadedCorrectly() {
-        Task task = new Task();
-        task.setTitle("Test_Title");
-        task.setDescription("Test_Description");
-        task.setStatus(Status.IN_PROGRESS);
-        task.setStartTime(ZonedDateTime.of(LocalDateTime.parse("01.01.2023 00:00", DT_FORMATTER), ZONE_ID));
-        task.setDuration(10);
-        Task receivedTask = null;
-        try {
-            TaskManager fileBackedTasksManager =
-                    Managers.getDefaultTaskManager(new File("Test_backup_file.csv"));
-            fileBackedTasksManager.deleteAllItems();
-            fileBackedTasksManager.addNewTask(task);
-            TaskManager anotherFileBackedTaskManager =
-                    FileBackedTasksManager.loadFromFile(new File("Test_backup_file.csv"));
-            receivedTask = anotherFileBackedTaskManager.getTaskById(1);
-        } catch (AddingAndUpdatingException | NoSuchTaskException e) {
-            System.out.println(e.getMessage());
+        List<Task> addingTasks = createSomeTasks();
+        manager.addNewTask(addingTasks.get(0));
+        TaskManager loadedManager;
+        if (manager instanceof InMemoryTaskManagerTest) {
+            loadedManager = FileBackedTasksManager.loadFromFile(new File("Test_backup_file.csv"));
+        } else {
+            loadedManager = manager;
         }
-        assertEquals(task, receivedTask, "Loaded task is not equal to added task!");
+        assertEquals(manager.getTaskById(1), loadedManager.getTaskById(1), "Loaded task is not equal to added task!");
     }
 
     /**
@@ -176,21 +105,15 @@ public class TaskManagerTest {
      */
     @Test
     void getTask() {
-        Task task = new Task();
-        task.setTitle("Test_Title");
-        task.setDescription("Test_Description");
-        task.setStatus(Status.IN_PROGRESS);
-        task.setStartTime(ZonedDateTime.of(LocalDateTime.parse("01.01.2023 00:00", DT_FORMATTER), ZONE_ID));
-        task.setDuration(10);
-        Task receivedTask = null;
-        try {
-            manager.addNewTask(task);
-            receivedTask = manager.getTask(1);
-        } catch (AddingAndUpdatingException | NoSuchTaskException e) {
-            System.out.println(e.getMessage());
+        List<Task> addingTasks = createSomeTasks();
+        manager.addNewTask(addingTasks.get(0));
+        TaskManager loadedManager;
+        if (manager instanceof InMemoryTaskManagerTest) {
+            loadedManager = FileBackedTasksManager.loadFromFile(new File("Test_backup_file.csv"));
+        } else {
+            loadedManager = manager;
         }
-        task.setId(1);
-        assertEquals(task, receivedTask, "Added task is not equal to received task!");
+        assertEquals(manager.getTaskById(1), loadedManager.getTaskById(1), "Received task is not equal to added task!");
     }
 
     /**
@@ -200,7 +123,7 @@ public class TaskManagerTest {
     void whenTryToGetTaskAndThereAreNoTasksShouldBeThrownAnException() {
         String exceptionMessage = null;
         try {
-            manager.getTask(6);
+            manager.getTask(666);
         } catch (NoSuchTaskException e) {
             exceptionMessage = e.getMessage();
         }
@@ -208,7 +131,7 @@ public class TaskManagerTest {
     }
 
     /**
-     * Получение задачи с без идентификатора.
+     * Получение задачи без идентификатора.
      */
     @Test
     void whenTryToGetTaskWithNoIdShouldBeThrownAnException() {
@@ -226,21 +149,9 @@ public class TaskManagerTest {
      */
     @Test
     void getEpic() {
-        Epic epic = new Epic();
-        epic.setTitle("Test_Title_1");
-        epic.setDescription("Test_Description_1");
-        Epic receivedEpic = null;
-        try {
-            manager.addNewEpic(epic);
-            receivedEpic = manager.getEpic(1);
-        } catch (AddingAndUpdatingException | NoSuchTaskException e) {
-            System.out.println(e.getMessage());
-        }
-        epic.setId(1);
-        epic.setStartTime(null);
-        epic.setDuration(0);
-        epic.setEndTime(null);
-        assertEquals(epic, receivedEpic, "Added epic is not equal to received epic!");
+        List<Task> addingTasks = createSomeTasks();
+        manager.addNewEpic((Epic) addingTasks.get(1));
+        assertEquals(addingTasks.get(1), manager.getEpic(1), "Epic wasn't received!");
     }
 
     /**
@@ -250,7 +161,7 @@ public class TaskManagerTest {
     void whenTryToGetEpicAndThereAreNoEpicsShouldBeThrownAnException() {
         String exceptionMessage = null;
         try {
-            manager.getEpic(6);
+            manager.getEpic(666);
         } catch (NoSuchTaskException e) {
             exceptionMessage = e.getMessage();
         }
@@ -258,7 +169,7 @@ public class TaskManagerTest {
     }
 
     /**
-     * Получение эпика с без идентификатора.
+     * Получение эпика без идентификатора.
      */
     @Test
     void whenTryToGetEpicWithNoIdShouldBeThrownAnException() {
@@ -276,24 +187,12 @@ public class TaskManagerTest {
      */
     @Test
     void getSubtask() {
-        Epic epic = new Epic();
-        Subtask subtask = new Subtask();
-        subtask.setTitle("Test_Title_1");
-        subtask.setDescription("Test_Description_1");
-        subtask.setStatus(Status.IN_PROGRESS);
-        subtask.setStartTime(ZonedDateTime.of(LocalDateTime.parse("01.01.2023 00:00", DT_FORMATTER), ZONE_ID));
-        subtask.setDuration(10);
+        List<Task> addingTasks = createSomeTasks();
+        manager.addNewEpic((Epic) addingTasks.get(1));
+        Subtask subtask = (Subtask) addingTasks.get(2);
         subtask.setEpicId(1);
-        Subtask receivedSubtask = null;
-        try {
-            manager.addNewEpic(epic);
-            manager.addNewSubtask(subtask);
-            receivedSubtask = manager.getSubtask(2);
-        } catch (AddingAndUpdatingException | NoSuchTaskException e) {
-            System.out.println(e.getMessage());
-        }
-        subtask.setId(2);
-        assertEquals(subtask, receivedSubtask, "Added subtask is not equal to received subtask!");
+        manager.addNewSubtask(subtask);
+        assertEquals(addingTasks.get(2), manager.getSubtask(2), "Subtask wasn't received!");
     }
 
     /**
@@ -329,32 +228,17 @@ public class TaskManagerTest {
      */
     @Test
     void updateTask() {
+        List<Task> addingTasks = createSomeTasks();
+        manager.addNewTask(addingTasks.get(0));
         Task task = new Task();
-        task.setTitle("Test_Title_1");
-        task.setDescription("Test_Description_1");
-        task.setStatus(Status.IN_PROGRESS);
-        task.setStartTime(ZonedDateTime.of(LocalDateTime.parse("01.01.2023 00:00", DT_FORMATTER), ZONE_ID));
-        task.setDuration(10);
-        try {
-            manager.addNewTask(task);
-        } catch (AddingAndUpdatingException | NoSuchTaskException e) {
-            System.out.println(e.getMessage());
-        }
-        Task newTask = new Task();
-        newTask.setId(1);
-        newTask.setTitle("Test_Updated_Title");
-        newTask.setDescription("Test_Updated_Description");
-        newTask.setStatus(Status.DONE);
-        newTask.setStartTime(ZonedDateTime.of(LocalDateTime.parse("01.01.2023 00:05", DT_FORMATTER), ZONE_ID));
-        newTask.setDuration(20);
-        Task updatedTask = null;
-        try {
-            manager.updateTask(newTask);
-            updatedTask = manager.getTask(1);
-        } catch (AddingAndUpdatingException | NoSuchTaskException e) {
-            System.out.println(e.getMessage());
-        }
-        assertEquals(newTask, updatedTask, "Updated task is not equal to received task!");
+        task.setId(1);
+        task.setStatus(Status.NEW);
+        task.setTitle("Updated_title");
+        task.setDescription("Updated_description");
+        task.setStartTime(ZonedDateTime.of(LocalDateTime.parse("02.02.2022 22:22", DT_FORMATTER), ZONE_ID));
+        task.setDuration(20L);
+        manager.updateTask(task);
+        assertEquals(task, manager.getTaskById(1), "Task wasn't updated!");
     }
 
     /**
@@ -390,20 +274,9 @@ public class TaskManagerTest {
      */
     @Test
     void addNewTask() {
-        Task task = new Task();
-        task.setTitle("Test_Title");
-        task.setDescription("Test_Description");
-        task.setStatus(Status.IN_PROGRESS);
-        task.setStartTime(ZonedDateTime.of(LocalDateTime.parse("01.01.2023 00:00", DT_FORMATTER), ZONE_ID));
-        task.setDuration(10);
-        Task receivedTask = null;
-        try {
-            manager.addNewTask(task);
-            receivedTask = manager.getTask(1);
-        } catch (AddingAndUpdatingException | NoSuchTaskException e) {
-            System.out.println(e.getMessage());
-        }
-        assertEquals(task, receivedTask, "Added task is not equal to received task!");
+        List<Task> addingTasks = createSomeTasks();
+        manager.addNewTask(addingTasks.get(0));
+        assertEquals(addingTasks.get(0), manager.getTaskById(1), "Received task is not equal to added task");
     }
 
     /**
@@ -411,17 +284,11 @@ public class TaskManagerTest {
      */
     @Test
     void WhenAddingNewTaskWithSpecifiedIdTheIdShouldBeOverwrote() {
-        Task task = new Task();
+        List<Task> addingTasks = createSomeTasks();
+        Task task = addingTasks.get(0);
         task.setId(666);
-        List<Task> receivedTaskList = null;
-        try {
-            manager.addNewTask(task);
-            receivedTaskList = manager.getAllItems();
-        } catch (AddingAndUpdatingException | NoSuchTaskException e) {
-            System.out.println(e.getMessage());
-        }
-        assert receivedTaskList != null;
-        assertEquals(1, receivedTaskList.get(0).getId(), "Id was not overwrote!");
+        manager.addNewTask(task);
+        assertEquals(1, manager.getAllItems().get(0).getId(), "Id wasn't overwrote!");
     }
 
     /**
@@ -451,26 +318,15 @@ public class TaskManagerTest {
      */
     @Test
     void updateEpic() {
+        List<Task> addingTasks = createSomeTasks();
+        manager.addNewEpic((Epic) addingTasks.get(1));
         Epic epic = new Epic();
-        epic.setTitle("Test_Title");
-        epic.setDescription("Test_Description");
-        try {
-            manager.addNewEpic(epic);
-        } catch (AddingAndUpdatingException | NoSuchTaskException e) {
-            System.out.println(e.getMessage());
-        }
-        Epic newEpic = new Epic();
-        newEpic.setId(1);
-        newEpic.setTitle("Test_Updated_Title");
-        newEpic.setDescription("Test_Updated_Description");
-        Epic updatedEpic = null;
-        try {
-            manager.updateEpic(newEpic);
-            updatedEpic = manager.getEpic(1);
-        } catch (AddingAndUpdatingException | NoSuchTaskException e) {
-            System.out.println(e.getMessage());
-        }
-        assertEquals(epic, updatedEpic, "Updated epic is not equal to received epic!");
+        epic.setId(1);
+        epic.setStatus(Status.NEW);
+        epic.setTitle("Updated_title");
+        epic.setDescription("Updated_description");
+        manager.updateEpic(epic);
+        assertEquals(epic, manager.getEpic(1), "Epic wasn't updated!");
     }
 
     /**
@@ -478,28 +334,13 @@ public class TaskManagerTest {
      */
     @Test
     void whenTryToUpdateEpicWithSubtaskListThisListShouldBeCleared() {
-        Epic epic1 = new Epic();
-        try {
-            manager.addNewEpic(epic1);
-        } catch (AddingAndUpdatingException | NoSuchTaskException e) {
-            System.out.println(e.getMessage());
-        }
-        Epic epic2 = new Epic();
-        epic2.setId(1);
-        epic2.setSubTasksIdList(List.of(1, 2, 3, 4, 5));
-        try {
-            manager.updateEpic(epic2);
-        } catch (AddingAndUpdatingException | NoSuchTaskException e) {
-            System.out.println(e.getMessage());
-        }
-        Epic recivedEpic = null;
-        try {
-            recivedEpic = manager.getEpic(1);
-        } catch (NoSuchTaskException e) {
-            System.out.println(e.getMessage());
-        }
-        assert recivedEpic != null;
-        assertTrue(recivedEpic.getSubTasksIdList().isEmpty(), "Subtask list of the updating epic wasn't cleared!");
+        List<Task> addingTasks = createSomeTasks();
+        manager.addNewEpic((Epic) addingTasks.get(1));
+        Epic epic = (Epic) addingTasks.get(1);
+        epic.setId(1);
+        epic.setSubTasksIdList(List.of(1, 2, 3, 4, 5));
+        manager.updateEpic(epic);
+        assertTrue(manager.getEpic(1).getSubTasksIdList().isEmpty(), "SubtaskList wasn't cleared!");
     }
 
     /**
@@ -507,26 +348,16 @@ public class TaskManagerTest {
      */
     @Test
     void whenTryToUpdateEpicWithStartTimeAndDurationTheyShouldBeCleared() {
-        Epic epic1 = new Epic();
-        try {
-            manager.addNewEpic(epic1);
-        } catch (AddingAndUpdatingException | NoSuchTaskException e) {
-            System.out.println(e.getMessage());
-        }
-        Epic newEpic = new Epic();
-        newEpic.setId(1);
-        newEpic.setStartTime(ZonedDateTime.of(LocalDateTime.parse("01.01.2023 00:00", DT_FORMATTER), ZONE_ID));
-        newEpic.setDuration(10);
-        Epic recivedEpic = null;
-        try {
-            manager.updateEpic(newEpic);
-            recivedEpic = manager.getEpic(1);
-        } catch (NoSuchTaskException | AddingAndUpdatingException e) {
-            System.out.println(e.getMessage());
-        }
-        assert recivedEpic != null;
-        assertNull(recivedEpic.getStartTime(), "Start time of the updated epic wasn't cleared!");
-        assertEquals(0, recivedEpic.getDuration(), "Duration of the updated epic wasn't cleared!");
+        List<Task> addingTasks = createSomeTasks();
+        manager.addNewEpic((Epic) addingTasks.get(1));
+        Epic epic = new Epic();
+        epic.setId(1);
+        epic.setStatus(Status.NEW);
+        epic.setStartTime(ZonedDateTime.of(LocalDateTime.parse("01.01.2023 00:00", DT_FORMATTER), ZONE_ID));
+        epic.setDuration(10);
+        manager.updateEpic(epic);
+        assertNull(manager.getEpic(1).getStartTime(), "Start time of the updated epic wasn't cleared!");
+        assertEquals(0, manager.getEpic(1).getDuration(), "Duration of the updated epic wasn't cleared!");
     }
 
     /**
@@ -534,17 +365,9 @@ public class TaskManagerTest {
      */
     @Test
     void addNewEpic() {
-        Epic epic = new Epic();
-        epic.setTitle("Test_Title");
-        epic.setDescription("Test_Description");
-        Epic receivedEpic = null;
-        try {
-            manager.addNewEpic(epic);
-            receivedEpic = manager.getEpic(1);
-        } catch (AddingAndUpdatingException | NoSuchTaskException e) {
-            System.out.println(e.getMessage());
-        }
-        assertEquals(epic, receivedEpic, "Added epic is not equal to received epic!");
+        List<Task> addingTasks = createSomeTasks();
+        manager.addNewEpic((Epic) addingTasks.get(1));
+        assertEquals(addingTasks.get(1), manager.getEpic(1), "Epic wasn't added!");
     }
 
     /**
@@ -552,17 +375,12 @@ public class TaskManagerTest {
      */
     @Test
     void whenTryToAddNewEpicWithSubtaskListThisListShouldBeCleared() {
-        Epic epic = new Epic();
+        List<Task> addingTasks = createSomeTasks();
+        Epic epic = (Epic) addingTasks.get(1);
         epic.setSubTasksIdList(List.of(1, 2, 3, 4, 5));
-        Epic recivedEpic = null;
-        try {
-            manager.addNewEpic(epic);
-            recivedEpic = manager.getEpic(1);
-        } catch (NoSuchTaskException | AddingAndUpdatingException e) {
-            System.out.println(e.getMessage());
-        }
-        assert recivedEpic != null;
-        assertTrue(recivedEpic.getSubTasksIdList().isEmpty(), "Subtask list of the adding epic wasn't cleared!");
+        manager.addNewEpic(epic);
+        assertTrue(manager.getEpic(1).getSubTasksIdList().isEmpty(),
+                "Subtask list of the adding epic wasn't cleared!");
     }
 
     /**
@@ -570,37 +388,25 @@ public class TaskManagerTest {
      */
     @Test
     void whenTryToAddNewEpicWithStartTimeAndDurationTheyShouldBeCleared() {
-        Epic epic = new Epic();
+        List<Task> addingTasks = createSomeTasks();
+        Epic epic = (Epic) addingTasks.get(1);
         epic.setStartTime(ZonedDateTime.of(LocalDateTime.parse("01.01.2023 00:00", DT_FORMATTER), ZONE_ID));
         epic.setDuration(10);
-        Epic receivedEpic = null;
-        try {
-            manager.addNewEpic(epic);
-            receivedEpic = manager.getEpic(1);
-        } catch (NoSuchTaskException | AddingAndUpdatingException e) {
-            System.out.println(e.getMessage());
-        }
-        assert receivedEpic != null;
-        assertNull(receivedEpic.getStartTime(), "Start time of the added epic wasn't cleared!");
-        assertEquals(0, receivedEpic.getDuration(), "Duration of the added epic wasn't cleared!");
+        manager.addNewEpic(epic);
+        assertNull(manager.getEpic(1).getStartTime(), "Start time of the added epic wasn't cleared!");
+        assertEquals(0, manager.getEpic(1).getDuration(), "Duration of the added epic wasn't cleared!");
     }
 
     /**
-     * Добавление нового эпика с указанием статуса в отсутсвие подзадач.
+     * Добавление нового эпика с указанием неверного статуса в отсутсвие подзадач.
      */
     @Test
-    void whenTryToAddNewEpicWithSomeStatusItShouldBeNewWhenThereAreNoSubtasks() {
-        Epic epic = new Epic();
+    void whenTryToAddNewEpicWithWrongStatusItShouldBeNewWhenThereAreNoSubtasks() {
+        List<Task> addingTasks = createSomeTasks();
+        Epic epic = (Epic) addingTasks.get(1);
         epic.setStatus(Status.IN_PROGRESS);
-        Epic recivedEpic = null;
-        try {
-            manager.addNewEpic(epic);
-            recivedEpic = manager.getEpic(1);
-        } catch (NoSuchTaskException | AddingAndUpdatingException e) {
-            System.out.println(e.getMessage());
-        }
-        assert recivedEpic != null;
-        assertEquals(Status.NEW, recivedEpic.getStatus(), "Status wasn't updated!");
+        manager.addNewEpic(epic);
+        assertEquals(Status.NEW, manager.getEpic(1).getStatus(), "Status wasn't updated!");
     }
 
     /**
@@ -608,7 +414,7 @@ public class TaskManagerTest {
      */
     @Test
     void whenAllSubtasksOfAnEpicAreNewEpicStatusShouldBeNew() {
-        Epic epic = new Epic();
+        List<Task> addingTasks = createSomeTasks();
         Subtask subtask1 = new Subtask();
         Subtask subtask2 = new Subtask();
         Subtask subtask3 = new Subtask();
@@ -618,22 +424,11 @@ public class TaskManagerTest {
         subtask1.setStatus(Status.NEW);
         subtask2.setStatus(Status.NEW);
         subtask3.setStatus(Status.NEW);
-        try {
-            manager.addNewEpic(epic);
-            manager.addNewSubtask(subtask1);
-            manager.addNewSubtask(subtask2);
-            manager.addNewSubtask(subtask3);
-        } catch (AddingAndUpdatingException | NoSuchTaskException e) {
-            System.out.println(e.getMessage());
-        }
-        Epic receivedEpic = null;
-        try {
-            receivedEpic = manager.getEpic(1);
-        } catch (NoSuchTaskException e) {
-            System.out.println(e.getMessage());
-        }
-        assert receivedEpic != null;
-        assertEquals(Status.NEW, receivedEpic.getStatus(), "Epic status is not NEW!");
+        manager.addNewEpic((Epic) addingTasks.get(1));
+        manager.addNewSubtask(subtask1);
+        manager.addNewSubtask(subtask2);
+        manager.addNewSubtask(subtask3);
+        assertEquals(Status.NEW, manager.getEpic(1).getStatus(), "Epic status is not NEW!");
     }
 
     /**
@@ -641,7 +436,7 @@ public class TaskManagerTest {
      */
     @Test
     void whenAllSubtasksOfAnEpicAreDoneEpicStatusShouldBeDone() {
-        Epic epic = new Epic();
+        List<Task> addingTasks = createSomeTasks();
         Subtask subtask1 = new Subtask();
         Subtask subtask2 = new Subtask();
         Subtask subtask3 = new Subtask();
@@ -651,22 +446,11 @@ public class TaskManagerTest {
         subtask1.setStatus(Status.DONE);
         subtask2.setStatus(Status.DONE);
         subtask3.setStatus(Status.DONE);
-        try {
-            manager.addNewEpic(epic);
-            manager.addNewSubtask(subtask1);
-            manager.addNewSubtask(subtask2);
-            manager.addNewSubtask(subtask3);
-        } catch (AddingAndUpdatingException | NoSuchTaskException e) {
-            System.out.println(e.getMessage());
-        }
-        Epic receivedEpic = null;
-        try {
-            receivedEpic = manager.getEpic(1);
-        } catch (NoSuchTaskException e) {
-            System.out.println(e.getMessage());
-        }
-        assert receivedEpic != null;
-        assertEquals(Status.DONE, receivedEpic.getStatus(), "Epic status is not DONE!");
+        manager.addNewEpic((Epic) addingTasks.get(1));
+        manager.addNewSubtask(subtask1);
+        manager.addNewSubtask(subtask2);
+        manager.addNewSubtask(subtask3);
+        assertEquals(Status.DONE, manager.getEpic(1).getStatus(), "Epic status is not DONE!");
     }
 
     /**
@@ -674,7 +458,7 @@ public class TaskManagerTest {
      */
     @Test
     void whenSubtasksOfAnEpicAreNewInProgressDoneEpicStatusShouldBeInProgress() {
-        Epic epic = new Epic();
+        List<Task> addingTasks = createSomeTasks();
         Subtask subtask1 = new Subtask();
         Subtask subtask2 = new Subtask();
         Subtask subtask3 = new Subtask();
@@ -684,22 +468,11 @@ public class TaskManagerTest {
         subtask1.setStatus(Status.NEW);
         subtask2.setStatus(Status.IN_PROGRESS);
         subtask3.setStatus(Status.DONE);
-        try {
-            manager.addNewEpic(epic);
-            manager.addNewSubtask(subtask1);
-            manager.addNewSubtask(subtask2);
-            manager.addNewSubtask(subtask3);
-        } catch (AddingAndUpdatingException | NoSuchTaskException e) {
-            System.out.println(e.getMessage());
-        }
-        Epic receivedEpic = null;
-        try {
-            receivedEpic = manager.getEpic(1);
-        } catch (NoSuchTaskException e) {
-            System.out.println(e.getMessage());
-        }
-        assert receivedEpic != null;
-        assertEquals(Status.IN_PROGRESS, receivedEpic.getStatus(), "Epic status is not IN_PROGRESS!");
+        manager.addNewEpic((Epic) addingTasks.get(1));
+        manager.addNewSubtask(subtask1);
+        manager.addNewSubtask(subtask2);
+        manager.addNewSubtask(subtask3);
+        assertEquals(Status.IN_PROGRESS, manager.getEpic(1).getStatus(), "Epic status is not IN_PROGRESS!");
     }
 
     /**
@@ -707,7 +480,7 @@ public class TaskManagerTest {
      */
     @Test
     void whenAddingSubtasksEpicTemporalFieldsAndDurationShouldChange() {
-        Epic epic = new Epic();
+        List<Task> addingTasks = createSomeTasks();
         Subtask subtask1 = new Subtask();
         Subtask subtask2 = new Subtask();
         Subtask subtask3 = new Subtask();
@@ -720,20 +493,15 @@ public class TaskManagerTest {
         subtask2.setDuration(25);
         subtask3.setStartTime(ZonedDateTime.of(LocalDateTime.parse("03.01.2023 01:30", DT_FORMATTER), ZONE_ID));
         subtask3.setDuration(30);
-        Epic receivedEpic = null;
-        try {
-            manager.addNewEpic(epic);
-            manager.addNewSubtask(subtask1);
-            manager.addNewSubtask(subtask2);
-            manager.addNewSubtask(subtask3);
-            receivedEpic = manager.getEpic(1);
-        } catch (AddingAndUpdatingException | NoSuchTaskException e) {
-            System.out.println(e.getMessage());
-        }
-        assert receivedEpic != null;
-        assertEquals(subtask1.getStartTime(), receivedEpic.getStartTime(), "Received epic has wrong start time!");
-        assertEquals(60, receivedEpic.getDuration(), "Received epic has wrong duration!");
-        assertEquals(subtask3.getEndTime(), receivedEpic.getEndTime(), "Received epic has wrong end time!");
+        manager.addNewEpic((Epic) addingTasks.get(1));
+        manager.addNewSubtask(subtask1);
+        manager.addNewSubtask(subtask2);
+        manager.addNewSubtask(subtask3);
+        assertEquals(manager.getSubtask(2).getStartTime(), manager.getEpic(1).getStartTime(),
+                "Received epic has wrong start time!");
+        assertEquals(60, manager.getEpic(1).getDuration(), "Received epic has wrong duration!");
+        assertEquals(manager.getSubtask(4).getEndTime(), manager.getEpic(1).getEndTime(),
+                "Received epic has wrong end time!");
     }
 
     /**
@@ -741,7 +509,7 @@ public class TaskManagerTest {
      */
     @Test
     void whenDeleteASubtaskOfAnEpicTemporalFieldsAndDurationShouldChange() {
-        Epic epic = new Epic();
+        List<Task> addingTasks = createSomeTasks();
         Subtask subtask1 = new Subtask();
         Subtask subtask2 = new Subtask();
         Subtask subtask3 = new Subtask();
@@ -754,21 +522,16 @@ public class TaskManagerTest {
         subtask2.setDuration(25);
         subtask3.setStartTime(ZonedDateTime.of(LocalDateTime.parse("03.01.2023 01:30", DT_FORMATTER), ZONE_ID));
         subtask3.setDuration(30);
-        Epic receivedEpic = null;
-        try {
-            manager.addNewEpic(epic);
-            manager.addNewSubtask(subtask1);
-            manager.addNewSubtask(subtask2);
-            manager.addNewSubtask(subtask3);
-            manager.deleteTaskById(2);
-            receivedEpic = manager.getEpic(1);
-        } catch (AddingAndUpdatingException | NoSuchTaskException e) {
-            System.out.println(e.getMessage());
-        }
-        assert receivedEpic != null;
-        assertEquals(subtask2.getStartTime(), receivedEpic.getStartTime(), "Received epic has wrong start time!");
-        assertEquals(55, receivedEpic.getDuration(), "Received epic has wrong duration!");
-        assertEquals(subtask3.getEndTime(), receivedEpic.getEndTime(), "Received epic has wrong end time!");
+        manager.addNewEpic((Epic) addingTasks.get(1));
+        manager.addNewSubtask(subtask1);
+        manager.addNewSubtask(subtask2);
+        manager.addNewSubtask(subtask3);
+        manager.deleteTaskById(2);
+        assertEquals(manager.getSubtask(3).getStartTime(), manager.getEpic(1).getStartTime(),
+                "Received epic has wrong start time!");
+        assertEquals(55, manager.getEpic(1).getDuration(), "Received epic has wrong duration!");
+        assertEquals(manager.getSubtask(4).getEndTime(), manager.getEpic(1).getEndTime(),
+                "Received epic has wrong end time!");
     }
 
     /**
@@ -776,21 +539,14 @@ public class TaskManagerTest {
      */
     @Test
     void whenDeleteASubtaskOfAnEpicItShouldChangeStatus() {
-        Epic epic = new Epic();
+        List<Task> addingTasks = createSomeTasks();
         Subtask subtask = new Subtask();
         subtask.setEpicId(1);
         subtask.setStatus(Status.IN_PROGRESS);
-        Task receivedEpic = null;
-        try {
-            manager.addNewEpic(epic);
-            manager.addNewSubtask(subtask);
-            manager.deleteTaskById(2);
-            receivedEpic = manager.getTaskById(1);
-        } catch (AddingAndUpdatingException | NoSuchTaskException e) {
-            System.out.println(e.getMessage());
-        }
-        assert receivedEpic != null;
-        assertEquals(Status.NEW, receivedEpic.getStatus(), "Epic status wasn't changed!");
+        manager.addNewEpic((Epic) addingTasks.get(1));
+        manager.addNewSubtask(subtask);
+        manager.deleteTaskById(2);
+        assertEquals(Status.NEW, manager.getEpic(1).getStatus(), "Epic status wasn't changed!");
     }
 
     /**
@@ -798,36 +554,21 @@ public class TaskManagerTest {
      */
     @Test
     void updateSubtask() {
-        Epic epic = new Epic();
-        Subtask subtask = new Subtask();
-        subtask.setTitle("Test_Title");
-        subtask.setDescription("Test_Description");
-        subtask.setStatus(Status.IN_PROGRESS);
-        subtask.setStartTime(ZonedDateTime.of(LocalDateTime.parse("01.01.2023 00:00", DT_FORMATTER), ZONE_ID));
-        subtask.setDuration(10);
+        List<Task> addingTasks = createSomeTasks();
+        manager.addNewEpic((Epic) addingTasks.get(1));
+        Subtask subtask = ((Subtask) addingTasks.get(2));
         subtask.setEpicId(1);
-        try {
-            manager.addNewEpic(epic);
-            manager.addNewSubtask(subtask);
-        } catch (AddingAndUpdatingException | NoSuchTaskException e) {
-            System.out.println(e.getMessage());
-        }
+        manager.addNewSubtask(subtask);
         Subtask newSubtask = new Subtask();
-        newSubtask.setTitle("Test_Updated_Title");
-        newSubtask.setDescription("Test_Updated_Description");
-        newSubtask.setStatus(Status.DONE);
-        newSubtask.setStartTime(ZonedDateTime.of(LocalDateTime.parse("01.01.2023 00:05", DT_FORMATTER), ZONE_ID));
-        newSubtask.setDuration(20);
         newSubtask.setId(2);
         newSubtask.setEpicId(1);
-        Subtask updatedSubtask = null;
-        try {
-            manager.updateSubtask(newSubtask);
-            updatedSubtask = manager.getSubtask(2);
-        } catch (AddingAndUpdatingException | NoSuchTaskException e) {
-            System.out.println(e.getMessage());
-        }
-        assertEquals(newSubtask, updatedSubtask, "Updated subtask is not equal to received subtask!");
+        newSubtask.setTitle("Updated_Title");
+        newSubtask.setDescription("Updated_Description");
+        newSubtask.setStatus(Status.DONE);
+        newSubtask.setStartTime(ZonedDateTime.of(LocalDateTime.parse("01.01.2023 01:00", DT_FORMATTER), ZONE_ID));
+        newSubtask.setDuration(20);
+        manager.updateSubtask(newSubtask);
+        assertEquals(newSubtask, manager.getSubtask(2), "Updated subtask is not equal to received subtask!");
     }
 
     /**
@@ -835,25 +576,22 @@ public class TaskManagerTest {
      */
     @Test
     void whenTryToUpdateSubtaskWithIntersectedRuntimeOfAnExistingTaskShouldBeThrownAnException() {
-        Task task = new Task();
-        task.setStartTime(ZonedDateTime.of(LocalDateTime.parse("01.01.2023 00:00", DT_FORMATTER), ZONE_ID));
-        task.setDuration(10);
-        Subtask subtask = new Subtask();
-        subtask.setStartTime(ZonedDateTime.of(LocalDateTime.parse("01.01.2023 00:10", DT_FORMATTER), ZONE_ID));
-        subtask.setDuration(10);
-        Subtask newSubtask = new Subtask();
-        subtask.setStartTime(ZonedDateTime.of(LocalDateTime.parse("01.01.2023 00:09", DT_FORMATTER), ZONE_ID));
-        subtask.setDuration(10);
+        List<Task> addingTasks = createSomeTasks();
+        manager.addNewTask(addingTasks.get(0));
+        manager.addNewEpic((Epic) addingTasks.get(1));
+        manager.addNewSubtask((Subtask) addingTasks.get(2));
+        Subtask subtask = (Subtask) addingTasks.get(2);
+        subtask.setStartTime(ZonedDateTime.of(LocalDateTime.parse("01.01.2023 00:00", DT_FORMATTER), ZONE_ID));
         String exceptionMessage = null;
         try {
-            manager.addNewTask(task);
-            manager.addNewSubtask(subtask);
-            manager.updateSubtask(newSubtask);
-        } catch (AddingAndUpdatingException | NoSuchTaskException e) {
+            manager.updateSubtask(subtask);
+        } catch (AddingAndUpdatingException |
+                 NoSuchTaskException e) {
             exceptionMessage = e.getMessage();
         }
-        assertEquals("The adding task intersects in execution time with an existing task!", exceptionMessage,
+        assertEquals("Updated subtask intersects in execution time with an existing task!", exceptionMessage,
                 "Updating subtask was updated despite intersecting the existing task!");
+
     }
 
     /**
@@ -861,21 +599,20 @@ public class TaskManagerTest {
      */
     @Test
     void whenTryToUpdateSubtaskWithNoIdShouldBeThrownAnException() {
-        Epic epic = new Epic();
-        Subtask subtask = new Subtask();
-        Subtask newSubtask = new Subtask();
-        newSubtask.setId(2);
+        List<Task> addingTasks = createSomeTasks();
+        manager.addNewTask(addingTasks.get(0));
+        manager.addNewEpic((Epic) addingTasks.get(1));
+        manager.addNewSubtask((Subtask) addingTasks.get(2));
+        Subtask subtask = (Subtask) addingTasks.get(2);
+        subtask.setId(0);
         String exceptionMessage = null;
         try {
-            manager.addNewEpic(epic);
-            manager.addNewSubtask(subtask);
-            manager.updateSubtask(newSubtask);
+            manager.updateSubtask(subtask);
         } catch (AddingAndUpdatingException | NoSuchTaskException e) {
             exceptionMessage = e.getMessage();
         }
-        assertEquals("Unable to add subtask! There's no epics with such epicId", exceptionMessage,
+        assertEquals("Task has no id!", exceptionMessage,
                 "Exception wasn't thrown!");
-
     }
 
     /**
@@ -883,23 +620,11 @@ public class TaskManagerTest {
      */
     @Test
     void addNewSubtask() {
-        Epic epic = new Epic();
-        Subtask subtask = new Subtask();
-        subtask.setTitle("Test_Title");
-        subtask.setDescription("Test_Description");
-        subtask.setStatus(Status.IN_PROGRESS);
-        subtask.setStartTime(ZonedDateTime.of(LocalDateTime.parse("01.01.2023 00:00", DT_FORMATTER), ZONE_ID));
-        subtask.setDuration(10);
-        subtask.setEpicId(1);
-        Subtask receivedSubtask = null;
-        try {
-            manager.addNewEpic(epic);
-            manager.addNewSubtask(subtask);
-            receivedSubtask = manager.getSubtask(2);
-        } catch (AddingAndUpdatingException | NoSuchTaskException e) {
-            System.out.println(e.getMessage());
-        }
-        assertEquals(subtask, receivedSubtask, "Added subtask is not equal to received subtask!");
+        List<Task> addingTasks = createSomeTasks();
+        manager.addNewTask(addingTasks.get(0));
+        manager.addNewEpic((Epic) addingTasks.get(1));
+        manager.addNewSubtask((Subtask) addingTasks.get(2));
+        assertEquals(addingTasks.get(2), manager.getSubtask(3), "Subtask wasn't added!");
     }
 
     /**
@@ -929,9 +654,9 @@ public class TaskManagerTest {
         Subtask subtask = new Subtask();
         subtask.setStartTime(ZonedDateTime.of(LocalDateTime.parse("01.01.2023 00:09", DT_FORMATTER), ZONE_ID));
         subtask.setDuration(10);
+        manager.addNewTask(task);
         String exceptionMessage = null;
         try {
-            manager.addNewTask(task);
             manager.addNewSubtask(subtask);
         } catch (AddingAndUpdatingException | NoSuchTaskException e) {
             exceptionMessage = e.getMessage();
@@ -941,34 +666,23 @@ public class TaskManagerTest {
     }
 
     /**
-     * Получение списка всех задач о стандартным поведением.
+     * Получение списка всех элементов о стандартным поведением.
      */
     @Test
     void getAllItems() {
-        Task task = new Task();
-        Epic epic = new Epic();
-        Subtask subtask = new Subtask();
-        subtask.setEpicId(2);
-        List<Task> taskList = List.of(task, epic, subtask);
-        List<Task> receivedTaskList = null;
-        try {
-            manager.addNewTask(task);
-            manager.addNewEpic(epic);
-            manager.addNewSubtask(subtask);
-            receivedTaskList = manager.getAllItems();
-        } catch (AddingAndUpdatingException | NoSuchTaskException e) {
-            System.out.println(e.getMessage());
-        }
-        assertEquals(taskList, receivedTaskList, "Added tasks are not equal to received tasks!");
+        List<Task> addingTasks = createSomeTasks();
+        manager.addNewTask(addingTasks.get(0));
+        manager.addNewEpic((Epic) addingTasks.get(1));
+        manager.addNewSubtask((Subtask) addingTasks.get(2));
+        assertEquals(addingTasks, manager.getAllItems(), "Added tasks are not equal to received tasks!");
     }
 
     /**
-     * Получение списка всех задач в отсутствие задач.
+     * Получение списка всех элементов в отсутствие задач.
      */
     @Test
     void whenTryToGetAllItemsInTheirAbsenceShouldReceiveAnEmptyList() {
-        List<Task> taskList = manager.getAllItems();
-        assertTrue(taskList.isEmpty(), "Received no existing tasks!");
+        assertTrue(manager.getAllItems().isEmpty(), "Received no existing tasks!");
     }
 
     /**
@@ -976,25 +690,18 @@ public class TaskManagerTest {
      */
     @Test
     void getAllTasks() {
+        List<Task> addingTasks = createSomeTasks();
         Task task1 = new Task();
+        task1.setStatus(Status.NEW);
         Task task2 = new Task();
-        Task task3 = new Task();
-        Epic epic = new Epic();
-        Subtask subtask = new Subtask();
-        subtask.setEpicId(4);
-        List<Task> taskList = List.of(task1, task2, task3);
-        List<Task> receivedTaskList = null;
-        try {
-            manager.addNewTask(task1);
-            manager.addNewTask(task2);
-            manager.addNewTask(task3);
-            manager.addNewEpic(epic);
-            manager.addNewSubtask(subtask);
-            receivedTaskList = manager.getAllTasks();
-        } catch (AddingAndUpdatingException | NoSuchTaskException e) {
-            System.out.println(e.getMessage());
-        }
-        assertEquals(taskList, receivedTaskList, "Received tasks are not equal to added tasks!");
+        task2.setStatus(Status.NEW);
+        manager.addNewTask(addingTasks.get(0));
+        manager.addNewEpic((Epic) addingTasks.get(1));
+        manager.addNewSubtask((Subtask) addingTasks.get(2));
+        manager.addNewTask(task1);
+        manager.addNewTask(task2);
+        List<Task> controllTaskList = List.of(addingTasks.get(0), task1, task2);
+        assertEquals(controllTaskList, manager.getAllTasks(), "Received tasks are not equal to added tasks!");
     }
 
     /**
@@ -1002,8 +709,7 @@ public class TaskManagerTest {
      */
     @Test
     void whenTryToGetAllTasksInTheirAbsenceShouldReceiveAnEmptyList() {
-        List<Task> taskList = manager.getAllTasks();
-        assertTrue(taskList.isEmpty(), "Received no existing tasks!");
+        assertTrue(manager.getAllTasks().isEmpty(), "Received no existing tasks!");
     }
 
     /**
@@ -1011,25 +717,18 @@ public class TaskManagerTest {
      */
     @Test
     void getAllEpics() {
+        List<Task> addingTasks = createSomeTasks();
         Epic epic1 = new Epic();
+        epic1.setStatus(Status.NEW);
         Epic epic2 = new Epic();
-        Epic epic3 = new Epic();
-        Task task = new Task();
-        Subtask subtask = new Subtask();
-        subtask.setEpicId(1);
-        List<Epic> taskList = List.of(epic1, epic2, epic3);
-        List<Epic> receivedTaskList = null;
-        try {
-            manager.addNewEpic(epic1);
-            manager.addNewEpic(epic2);
-            manager.addNewEpic(epic3);
-            manager.addNewTask(task);
-            manager.addNewSubtask(subtask);
-            receivedTaskList = manager.getAllEpics();
-        } catch (AddingAndUpdatingException | NoSuchTaskException e) {
-            System.out.println(e.getMessage());
-        }
-        assertEquals(taskList, receivedTaskList, "Added tasks are not equal to received tasks!");
+        epic2.setStatus(Status.NEW);
+        manager.addNewTask(addingTasks.get(0));
+        manager.addNewEpic((Epic) addingTasks.get(1));
+        manager.addNewSubtask((Subtask) addingTasks.get(2));
+        manager.addNewEpic(epic1);
+        manager.addNewEpic(epic2);
+        List<Task> controllTaskList = List.of(addingTasks.get(1), epic1, epic2);
+        assertEquals(controllTaskList, manager.getAllEpics(), "Received tasks are not equal to added tasks!");
     }
 
     /**
@@ -1037,8 +736,7 @@ public class TaskManagerTest {
      */
     @Test
     void whenTryToGetAllEpicsInTheirAbsenceShouldReceiveAnEmptyList() {
-        List<Epic> epicList = manager.getAllEpics();
-        assertTrue(epicList.isEmpty(), "Received no existing epics!");
+        assertTrue(manager.getAllEpics().isEmpty(), "Received no existing epics!");
     }
 
     /**
@@ -1046,27 +744,20 @@ public class TaskManagerTest {
      */
     @Test
     void getAllSubtasks() {
-        Task task = new Task();
-        Epic epic = new Epic();
+        List<Task> addingTasks = createSomeTasks();
         Subtask subtask1 = new Subtask();
-        Subtask subtask2 = new Subtask();
-        Subtask subtask3 = new Subtask();
+        subtask1.setStatus(Status.NEW);
         subtask1.setEpicId(2);
+        Subtask subtask2 = new Subtask();
         subtask2.setEpicId(2);
-        subtask3.setEpicId(2);
-        List<Subtask> subtaskList = List.of(subtask1, subtask2, subtask3);
-        List<Subtask> receivedList = null;
-        try {
-            manager.addNewTask(task);
-            manager.addNewEpic(epic);
-            manager.addNewSubtask(subtask1);
-            manager.addNewSubtask(subtask2);
-            manager.addNewSubtask(subtask3);
-            receivedList = manager.getAllSubtasks();
-        } catch (AddingAndUpdatingException | NoSuchTaskException e) {
-            System.out.println(e.getMessage());
-        }
-        assertEquals(subtaskList, receivedList, "Added subtasks are not equal to received subtasks!");
+        subtask2.setStatus(Status.NEW);
+        manager.addNewTask(addingTasks.get(0));
+        manager.addNewEpic((Epic) addingTasks.get(1));
+        manager.addNewSubtask((Subtask) addingTasks.get(2));
+        manager.addNewSubtask(subtask1);
+        manager.addNewSubtask(subtask2);
+        List<Task> controllTaskList = List.of(addingTasks.get(2), subtask1, subtask2);
+        assertEquals(controllTaskList, manager.getAllSubtasks(), "Received tasks are not equal to added tasks!");
     }
 
     /**
@@ -1074,43 +765,16 @@ public class TaskManagerTest {
      */
     @Test
     void getTasksByType() {
-        Task task1 = new Task();
-        Task task2 = new Task();
-        Task task3 = new Task();
-        Epic epic1 = new Epic();
-        Epic epic2 = new Epic();
-        Epic epic3 = new Epic();
-        Subtask subtask1 = new Subtask();
-        Subtask subtask2 = new Subtask();
-        Subtask subtask3 = new Subtask();
-        subtask1.setEpicId(4);
-        subtask2.setEpicId(4);
-        subtask3.setEpicId(4);
-        List<Task> taskList = List.of(task1, task2, task3);
-        List<Epic> epicList = List.of(epic1, epic2, epic3);
-        List<Subtask> subtaskList = List.of(subtask1, subtask2, subtask3);
-        List<Task> receivedTaskList = null;
-        List<Task> receivedEpicList = null;
-        List<Task> receivedSubtaskList = null;
-        try {
-            manager.addNewTask(task1);
-            manager.addNewTask(task2);
-            manager.addNewTask(task3);
-            manager.addNewEpic(epic1);
-            manager.addNewEpic(epic2);
-            manager.addNewEpic(epic3);
-            manager.addNewSubtask(subtask1);
-            manager.addNewSubtask(subtask2);
-            manager.addNewSubtask(subtask3);
-            receivedTaskList = manager.getTasksByType(Type.TASK);
-            receivedEpicList = manager.getTasksByType(Type.EPIC);
-            receivedSubtaskList = manager.getTasksByType(Type.SUBTASK);
-        } catch (AddingAndUpdatingException | NoSuchTaskException e) {
-            System.out.println(e.getMessage());
-        }
-        assertEquals(taskList, receivedTaskList, "Received task list is not equal to added task list!");
-        assertEquals(epicList, receivedEpicList, "Received epic list is not equal to added epic list!");
-        assertEquals(subtaskList, receivedSubtaskList, "Received subtask list is not equal to added subtask list!");
+        List<Task> addingTasks = createSomeTasks();
+        manager.addNewTask(addingTasks.get(0));
+        manager.addNewEpic((Epic) addingTasks.get(1));
+        manager.addNewSubtask((Subtask) addingTasks.get(2));
+        assertEquals(addingTasks.get(0), manager.getTasksByType(Type.TASK).get(0),
+                "Received task list is not equal to added task list!");
+        assertEquals(addingTasks.get(1), manager.getTasksByType(Type.EPIC).get(0),
+                "Received epic list is not equal to added epic list!");
+        assertEquals(addingTasks.get(2), manager.getTasksByType(Type.SUBTASK).get(0),
+                "Received subtask list is not equal to added subtask list!");
     }
 
     /**
@@ -1130,20 +794,12 @@ public class TaskManagerTest {
      */
     @Test
     void deleteAllItems() {
-        Task task = new Task();
-        Epic epic = new Epic();
-        Subtask subtask = new Subtask();
-        subtask.setEpicId(2);
-        try {
-            manager.addNewTask(task);
-            manager.addNewEpic(epic);
-            manager.addNewSubtask(subtask);
-            manager.deleteAllItems();
-        } catch (AddingAndUpdatingException | NoSuchTaskException e) {
-            System.out.println(e.getMessage());
-        }
-        List<Task> receivedTaskList = manager.getAllItems();
-        assertTrue(receivedTaskList.isEmpty(), "Deleting was not successful!");
+        List<Task> addingTasks = createSomeTasks();
+        manager.addNewTask(addingTasks.get(0));
+        manager.addNewEpic((Epic) addingTasks.get(1));
+        manager.addNewSubtask((Subtask) addingTasks.get(2));
+        manager.deleteAllItems();
+        assertTrue(manager.getAllItems().isEmpty(), "Deleting was not successful!");
     }
 
     /**
@@ -1151,21 +807,18 @@ public class TaskManagerTest {
      */
     @Test
     void deleteTaskById() {
-        Task task = new Task();
-        Epic epic = new Epic();
-        Subtask subtask = new Subtask();
-        subtask.setEpicId(2);
+        List<Task> addingTasks = createSomeTasks();
+        manager.addNewTask(addingTasks.get(0));
+        manager.addNewEpic((Epic) addingTasks.get(1));
+        manager.addNewSubtask((Subtask) addingTasks.get(2));
+        manager.deleteTaskById(1);
         String exceptionMessage = null;
         try {
-            manager.addNewTask(task);
-            manager.addNewEpic(epic);
-            manager.addNewSubtask(subtask);
-            manager.deleteTaskById(1);
             manager.getTaskById(1);
-        } catch (AddingAndUpdatingException | NoSuchTaskException e) {
+        } catch (NoSuchTaskException e) {
             exceptionMessage = e.getMessage();
         }
-        assertEquals("There's no task with such id!", exceptionMessage, "Task wasn't deleted!");
+        assertEquals("There's no task with such id!", exceptionMessage, "Deleting was not successful!");
     }
 
     /**
@@ -1175,7 +828,7 @@ public class TaskManagerTest {
     void whenTryToDeleteNoExistingTaskByIdShouldBeThrownAnException() {
         String exceptionMessage = null;
         try {
-            manager.getTaskById(1);
+            manager.getTaskById(666);
         } catch (NoSuchTaskException e) {
             exceptionMessage = e.getMessage();
         }
@@ -1187,46 +840,16 @@ public class TaskManagerTest {
      */
     @Test
     void deleteTasksByType() {
-        Task task1 = new Task();
-        Task task2 = new Task();
-        Task task3 = new Task();
-        Epic epic1 = new Epic();
-        Epic epic2 = new Epic();
-        Epic epic3 = new Epic();
-        Subtask subtask1 = new Subtask();
-        Subtask subtask2 = new Subtask();
-        Subtask subtask3 = new Subtask();
-        subtask1.setEpicId(4);
-        subtask2.setEpicId(4);
-        subtask3.setEpicId(4);
-        List<Task> receivedTaskList = null;
-        List<Task> receivedEpicList = null;
-        List<Task> receivedSubtaskList = null;
-        try {
-            manager.addNewTask(task1);
-            manager.addNewTask(task2);
-            manager.addNewTask(task3);
-            manager.addNewEpic(epic1);
-            manager.addNewEpic(epic2);
-            manager.addNewEpic(epic3);
-            manager.addNewSubtask(subtask1);
-            manager.addNewSubtask(subtask2);
-            manager.addNewSubtask(subtask3);
-            manager.deleteTasksByType(Type.TASK);
-            manager.deleteTasksByType(Type.EPIC);
-            manager.deleteTasksByType(Type.SUBTASK);
-            receivedTaskList = manager.getTasksByType(Type.TASK);
-            receivedEpicList = manager.getTasksByType(Type.EPIC);
-            receivedSubtaskList = manager.getTasksByType(Type.SUBTASK);
-        } catch (AddingAndUpdatingException | NoSuchTaskException e) {
-            System.out.println(e.getMessage());
-        }
-        assert receivedTaskList != null;
-        assertTrue(receivedTaskList.isEmpty(), "Received task list is not empty!");
-        assert receivedEpicList != null;
-        assertTrue(receivedEpicList.isEmpty(), "Received epic list is not empty!");
-        assert receivedSubtaskList != null;
-        assertTrue(receivedSubtaskList.isEmpty(), "Received subtask list is not empty!");
+        List<Task> addingTasks = createSomeTasks();
+        manager.addNewTask(addingTasks.get(0));
+        manager.addNewEpic((Epic) addingTasks.get(1));
+        manager.addNewSubtask((Subtask) addingTasks.get(2));
+        manager.deleteTasksByType(Type.TASK);
+        manager.deleteTasksByType(Type.SUBTASK);
+        manager.deleteTasksByType(Type.EPIC);
+        assertTrue(manager.getTasksByType(Type.TASK).isEmpty(), "Received task list is not empty!");
+        assertTrue(manager.getTasksByType(Type.EPIC).isEmpty(), "Received epic list is not empty!");
+        assertTrue(manager.getTasksByType(Type.SUBTASK).isEmpty(), "Received subtask list is not empty!");
     }
 
     /**
@@ -1234,19 +857,13 @@ public class TaskManagerTest {
      */
     @Test
     void getTaskById() {
-        Task task1 = new Task();
-        Task task2 = new Task();
-        Task task3 = new Task();
-        Task receivedTask = null;
-        try {
-            manager.addNewTask(task1);
-            manager.addNewTask(task2);
-            manager.addNewTask(task3);
-            receivedTask = manager.getTaskById(2);
-        } catch (AddingAndUpdatingException | NoSuchTaskException e) {
-            System.out.println(e.getMessage());
-        }
-        assertEquals(task2, receivedTask, "Received task is not equal to added task");
+        List<Task> addingTasks = createSomeTasks();
+        manager.addNewTask(addingTasks.get(0));
+        manager.addNewEpic((Epic) addingTasks.get(1));
+        manager.addNewSubtask((Subtask) addingTasks.get(2));
+        assertEquals(addingTasks.get(0), manager.getTaskById(1), "Received task is not equal to added task");
+        assertEquals(addingTasks.get(1), manager.getTaskById(2), "Received task is not equal to added task");
+        assertEquals(addingTasks.get(2), manager.getTaskById(3), "Received task is not equal to added task");
     }
 
     /**
@@ -1268,25 +885,20 @@ public class TaskManagerTest {
      */
     @Test
     void getEpicsSubtasksById() {
-        Epic epic = new Epic();
+        List<Task> addingTasks = createSomeTasks();
         Subtask subtask1 = new Subtask();
+        subtask1.setStatus(Status.NEW);
+        subtask1.setEpicId(2);
         Subtask subtask2 = new Subtask();
-        Subtask subtask3 = new Subtask();
-        subtask1.setEpicId(1);
-        subtask2.setEpicId(1);
-        subtask3.setEpicId(1);
-        List<Subtask> subtaskList = List.of(subtask1, subtask2, subtask3);
-        List<Subtask> receivedList = null;
-        try {
-            manager.addNewEpic(epic);
-            manager.addNewSubtask(subtask1);
-            manager.addNewSubtask(subtask2);
-            manager.addNewSubtask(subtask3);
-            receivedList = manager.getEpicsSubtasksById(1);
-        } catch (AddingAndUpdatingException | NoSuchTaskException e) {
-            System.out.println(e.getMessage());
-        }
-        assertEquals(subtaskList, receivedList, "Received list is not equal to added list");
+        subtask2.setEpicId(2);
+        subtask2.setStatus(Status.NEW);
+        manager.addNewTask(addingTasks.get(0));
+        manager.addNewEpic((Epic) addingTasks.get(1));
+        manager.addNewSubtask((Subtask) addingTasks.get(2));
+        manager.addNewSubtask(subtask1);
+        manager.addNewSubtask(subtask2);
+        List<Task> comtrollList = List.of(addingTasks.get(2), subtask1, subtask2);
+        assertEquals(comtrollList, manager.getEpicsSubtasksById(2), "Received list is not equal to added list");
     }
 
     /**
@@ -1294,12 +906,12 @@ public class TaskManagerTest {
      */
     @Test
     void whenTryToGetSubtaskListOfAnEpicWithoutSubtasksShouldBeThrownAnException() {
-        Epic epic = new Epic();
+        List<Task> addingTasks = createSomeTasks();
+        manager.addNewEpic((Epic) addingTasks.get(1));
         String exceptionMessage = null;
         try {
-            manager.addNewEpic(epic);
             manager.getEpicsSubtasksById(1);
-        } catch (AddingAndUpdatingException | NoSuchTaskException e) {
+        } catch (NoSuchTaskException e) {
             exceptionMessage = e.getMessage();
         }
         assertEquals("Epic has no subtasks!", exceptionMessage, "Exception wasn't thrown!");
@@ -1310,42 +922,12 @@ public class TaskManagerTest {
      */
     @Test
     void getPrioritizedTasks() {
-        Task task1 = new Task();
-        task1.setStartTime(ZonedDateTime.of(LocalDateTime.parse("01.01.2023 00:00", DT_FORMATTER), ZONE_ID));
-        task1.setDuration(10);
-        Task task2 = new Task();
-        task2.setStartTime(ZonedDateTime.of(LocalDateTime.parse("01.01.2023 00:10", DT_FORMATTER), ZONE_ID));
-        task2.setDuration(10);
-        Epic epic1 = new Epic();
-        Epic epic2 = new Epic();
-        Epic epic3 = new Epic();
-        Subtask subtask1 = new Subtask();
-        subtask1.setEpicId(3);
-        subtask1.setStartTime(ZonedDateTime.of(LocalDateTime.parse("01.01.2023 00:20", DT_FORMATTER), ZONE_ID));
-        subtask1.setDuration(10);
-        Subtask subtask2 = new Subtask();
-        subtask2.setEpicId(3);
-        subtask2.setStartTime(ZonedDateTime.of(LocalDateTime.parse("01.01.2023 00:30", DT_FORMATTER), ZONE_ID));
-        subtask2.setDuration(10);
-        List<Task> taskList = List.of(task1, task2, subtask1, epic1, subtask2, epic3, epic2);
-        List<Task> allTasksList = null;
-        List<Task> receivedTaskList = null;
-        try {
-            manager.addNewTask(task1);
-            manager.addNewTask(task2);
-            manager.addNewEpic(epic1);
-            manager.addNewEpic(epic2);
-            manager.addNewEpic(epic3);
-            manager.addNewSubtask(subtask1);
-            manager.addNewSubtask(subtask2);
-            allTasksList = manager.getAllItems();
-            receivedTaskList = manager.getPrioritizedTasks();
-        } catch (AddingAndUpdatingException | NoSuchTaskException e) {
-            System.out.println(e.getMessage());
-        }
-        assert allTasksList != null;
-        assertEquals(allTasksList.size(), receivedTaskList.size(), "Received tasks quantity is not equal to all tasks");
-        assertEquals(taskList, receivedTaskList, "Received tasks are in wrong order");
+        List<Task> addingTasks = createSomeTasks();
+        manager.addNewTask(addingTasks.get(0));
+        manager.addNewEpic((Epic) addingTasks.get(1));
+        manager.addNewSubtask((Subtask) addingTasks.get(2));
+        List<Task> controllList = List.of(addingTasks.get(0), addingTasks.get(2));
+        assertEquals(controllList, manager.getPrioritizedTasks(), "Received tasks are in wrong order!");
     }
 
     /**
@@ -1353,8 +935,36 @@ public class TaskManagerTest {
      */
     @Test
     void whenTryToGetPrioritizedTasksInTheirAbsenceShouldReceiveAnEmptyList() {
-        List<Task> receivedTaskList = manager.getPrioritizedTasks();
-        assertTrue(receivedTaskList.isEmpty(), "Received no existing tasks");
+        assertTrue(manager.getPrioritizedTasks().isEmpty(), "Received wrong priority list!");
+    }
+
+    private List<Task> createSomeTasks() {
+        Task task = new Task();
+        task.setStatus(Status.NEW);
+        task.setTitle("Test_title");
+        task.setDescription("Test_description");
+        task.setStartTime(ZonedDateTime.of(LocalDateTime.parse("01.01.2023 00:00", DT_FORMATTER), ZONE_ID));
+        task.setDuration(10L);
+
+        Epic epic = new Epic();
+        epic.setStatus(Status.NEW);
+        epic.setTitle("Test_title");
+        epic.setDescription("Test_description");
+
+        Subtask subtask = new Subtask();
+        subtask.setStatus(Status.NEW);
+        subtask.setEpicId(2);
+        subtask.setTitle("Test_title");
+        subtask.setDescription("Test_description");
+        subtask.setStartTime(ZonedDateTime.of(LocalDateTime.parse("01.01.2023 00:10", DT_FORMATTER), ZONE_ID));
+        subtask.setDuration(10L);
+
+        List<Task> taskList = new ArrayList<>();
+        taskList.add(task);
+        taskList.add(epic);
+        taskList.add(subtask);
+
+        return taskList;
     }
 
 }

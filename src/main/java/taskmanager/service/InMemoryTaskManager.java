@@ -31,58 +31,51 @@ public class InMemoryTaskManager implements TaskManager {
     }
 
     @Override
-    public Task getTask(int taskId) throws NoSuchTaskException {
+    public Task getTask(int taskId) {
         idCheck(taskId);
         Task task = taskMap.get(taskId);
-        if (task != null) {
-            historyManager.add(task);
-        }
+        historyManager.add(task);
         return task;
     }
 
     @Override
-    public Epic getEpic(int epicId) throws NoSuchTaskException {
+    public Epic getEpic(int epicId) {
         idCheck(epicId);
         Epic epic = epicMap.get(epicId);
-        if (epic != null) {
-            historyManager.add(epic);
-        }
+        historyManager.add(epic);
         return epic;
     }
 
     @Override
-    public Subtask getSubtask(int subtaskId) throws NoSuchTaskException {
+    public Subtask getSubtask(int subtaskId) {
         idCheck(subtaskId);
         Subtask subtask = subtaskMap.get(subtaskId);
-        if (subtask != null) {
-            historyManager.add(subtask);
-        }
+        historyManager.add(subtask);
         return subtask;
     }
 
     @Override
-    public void addNewTask(Task task) throws AddingAndUpdatingException, NoSuchTaskException {
-        IntersectingCheck(task);
+    public void addNewTask(Task task) {
+        intersectingCheck(task);
         task.setId(createId());
         prioritySet.add(task);
         taskMap.put(task.getId(), task);
     }
 
     @Override
-    public void addNewEpic(Epic epic) throws AddingAndUpdatingException, NoSuchTaskException {
+    public void addNewEpic(Epic epic) {
         epic.setId(createId());
         epic.setSubTasksIdList(new ArrayList<>());
         epic.setStartTime(null);
         epic.setDuration(0);
         epic.setEndTime(null);
-        prioritySet.add(epic);
         epicMap.put(epic.getId(), epic);
         updateEpicFields(epic.getId());
     }
 
     @Override
-    public void addNewSubtask(Subtask subtask) throws AddingAndUpdatingException, NoSuchTaskException {
-        IntersectingCheck(subtask);
+    public void addNewSubtask(Subtask subtask) {
+        intersectingCheck(subtask);
         if (epicMap.isEmpty()) {
             throw new AddingAndUpdatingException("Unable to add subtask! There's no epics!");
         } else if (!epicMap.containsKey(subtask.getEpicId())) {
@@ -96,15 +89,14 @@ public class InMemoryTaskManager implements TaskManager {
     }
 
     @Override
-    public void updateTask(Task newTask) throws AddingAndUpdatingException, NoSuchTaskException {
+    public void updateTask(Task newTask) {
         idCheck(newTask.getId());
         Task existingTask = taskMap.get(newTask.getId());
-        deleteTaskById(existingTask.getId());
+        prioritySet.remove(existingTask);
         try {
-            IntersectingCheck(existingTask);
+            intersectingCheck(existingTask);
         } catch (AddingAndUpdatingException e) {
             prioritySet.add(existingTask);
-            taskMap.put(existingTask.getId(), existingTask);
             throw new AddingAndUpdatingException("Updated task intersects in execution time with an existing task!");
         }
         existingTask.setTitle(newTask.getTitle());
@@ -117,31 +109,29 @@ public class InMemoryTaskManager implements TaskManager {
     }
 
     @Override
-    public void updateEpic(Epic newEpic) throws AddingAndUpdatingException, NoSuchTaskException {
+    public void updateEpic(Epic newEpic) {
         idCheck(newEpic.getId());
         Epic existingEpic = epicMap.get(newEpic.getId());
-        deleteTaskById(existingEpic.getId());
         existingEpic.setSubTasksIdList(new ArrayList<>());
         existingEpic.setStartTime(null);
         existingEpic.setDuration(0);
         existingEpic.setEndTime(null);
         existingEpic.setTitle(newEpic.getTitle());
         existingEpic.setDescription(newEpic.getDescription());
-        prioritySet.add(existingEpic);
         epicMap.put(existingEpic.getId(), existingEpic);
         updateEpicFields(existingEpic.getId());
     }
 
     @Override
-    public void updateSubtask(Subtask newSubtask) throws AddingAndUpdatingException, NoSuchTaskException {
+    public void updateSubtask(Subtask newSubtask) {
         idCheck(newSubtask.getId());
         Subtask existingSubtask = subtaskMap.get(newSubtask.getId());
-        deleteTaskById(newSubtask.getId());
+        prioritySet.remove(existingSubtask);
         updateEpicFields(existingSubtask.getEpicId());
         try {
-            IntersectingCheck(newSubtask);
+            intersectingCheck(newSubtask);
         } catch (AddingAndUpdatingException e) {
-            addNewSubtask(existingSubtask);
+            prioritySet.add(existingSubtask);
             throw new AddingAndUpdatingException("Updated subtask intersects in execution time with an existing task!");
         }
         existingSubtask.setTitle(newSubtask.getTitle());
@@ -204,10 +194,11 @@ public class InMemoryTaskManager implements TaskManager {
         subtaskMap.clear();
         historyManager.clear();
         prioritySet.clear();
+        id = 1;
     }
 
     @Override
-    public void deleteTaskById(int id) throws NoSuchTaskException {
+    public void deleteTaskById(int id) {
         idCheck(id);
         if (taskMap.containsKey(id)) {
             historyManager.remove(id);
@@ -222,7 +213,6 @@ public class InMemoryTaskManager implements TaskManager {
                     subtaskMap.remove(subtaskId);
                 }
             }
-            prioritySet.remove(epicMap.get(id));
             historyManager.remove(id);
             epicMap.remove(id);
         } else if (subtaskMap.containsKey(id)) {
@@ -236,7 +226,7 @@ public class InMemoryTaskManager implements TaskManager {
     }
 
     @Override
-    public void deleteTasksByType(Type type) throws NoSuchTaskException {
+    public void deleteTasksByType(Type type) {
         switch (type) {
             case TASK:
                 for (Task task : taskMap.values()) {
@@ -247,7 +237,6 @@ public class InMemoryTaskManager implements TaskManager {
                 break;
             case EPIC:
                 for (Epic epic : epicMap.values()) {
-                    prioritySet.remove(epic);
                     historyManager.remove(epic.getId());
                 }
                 epicMap.clear();
@@ -272,7 +261,7 @@ public class InMemoryTaskManager implements TaskManager {
     }
 
     @Override
-    public Task getTaskById(int id) throws NoSuchTaskException {
+    public Task getTaskById(int id) {
         idCheck(id);
         if (taskMap.containsKey(id)) {
             return getTask(id);
@@ -285,7 +274,7 @@ public class InMemoryTaskManager implements TaskManager {
     }
 
     @Override
-    public List<Subtask> getEpicsSubtasksById(int epicId) throws NoSuchTaskException {
+    public List<Subtask> getEpicsSubtasksById(int epicId) {
         idCheck(epicId);
         if (epicMap.isEmpty()) {
             throw new NoSuchTaskException("Unable to get subtasks! There's no epics!");
@@ -322,9 +311,9 @@ public class InMemoryTaskManager implements TaskManager {
         return ++id;
     }
 
-    private void updateEpicFields(int epicId) throws NoSuchTaskException {
+    private void updateEpicFields(int epicId) {
         updateEpicStatus(epicId);
-        UpdateEpicTemporal(epicId);
+        updateEpicTemporal(epicId);
     }
 
     private void updateEpicStatus(int epicId) {
@@ -348,19 +337,22 @@ public class InMemoryTaskManager implements TaskManager {
             } else if (doneSubtasksCount == subtasksIdList.size()) {
                 existingEpic.setStatus(Status.DONE);
             } else {
-                existingEpic.setStatus(Status.NEW);
+                existingEpic.setStatus(Status.IN_PROGRESS);
             }
         } else {
-            epicMap.get(epicId).setStatus(Status.NEW);
+            existingEpic.setStatus(Status.NEW);
             existingEpic.setStartTime(null);
             existingEpic.setDuration(0);
             existingEpic.setEndTime(null);
         }
     }
 
-    private void UpdateEpicTemporal(int epicId) throws NoSuchTaskException {
-        if (!epicMap.get(epicId).getSubTasksIdList().isEmpty()) {
-            Epic epic = epicMap.get(epicId);
+    private void updateEpicTemporal(int epicId) {
+        Epic epic = epicMap.get(epicId);
+        if (epic == null) {
+            return;
+        }
+        if (!epic.getSubTasksIdList().isEmpty()) {
             List<Subtask> subtasksIdList = getEpicsSubtasksById(epicId);
             long epicDuration = 0;
             TreeSet<ZonedDateTime> timeSet = new TreeSet<>((startTime1, startTime2) ->
@@ -375,37 +367,45 @@ public class InMemoryTaskManager implements TaskManager {
                 }
             }
             if (!(timeSet.isEmpty() && epicDuration == 0)) {
-                prioritySet.remove(epic);
                 epic.setStartTime(timeSet.first());
                 epic.setDuration(epicDuration);
                 epic.setEndTime(timeSet.last());
-                prioritySet.add(epic);
             }
         } else {
-            Epic epic = epicMap.get(epicId);
             epic.setStartTime(null);
             epic.setDuration(0);
             epic.setEndTime(null);
         }
     }
 
-    private void IntersectingCheck(Task newTask) throws AddingAndUpdatingException {
+    private void intersectingCheck(Task newTask) {
         if (newTask.getStartTime() == null || newTask.getDuration() == 0 || prioritySet.isEmpty()) {
             return;
         }
+        if (newTask.getEndTime().isBefore(newTask.getStartTime())) {
+            throw new AddingAndUpdatingException(
+                    "The adding task end time is before start time!");
+        }
+        if (newTask.getStartTime().isAfter(newTask.getEndTime())) {
+            throw new AddingAndUpdatingException(
+                    "The adding task start time is after end time!");
+        }
         for (Task task : prioritySet) {
-            if (!(task.getStartTime() == null || task.getDuration() == 0)) {
-                if (task.getStartTime().isBefore(newTask.getEndTime())
-                        && task.getEndTime().isAfter(newTask.getStartTime())) {
-                    throw new AddingAndUpdatingException(
-                            "The adding task intersects in execution time with an existing task!");
-                }
+            if (task.getStartTime() == null || task.getDuration() == 0) {
+                return;
             }
-            return;
+            if (task.getId() == newTask.getId()) {
+                continue;
+            }
+            if (task.getStartTime().isBefore(newTask.getEndTime())
+                    && task.getEndTime().isAfter(newTask.getStartTime())) {
+                throw new AddingAndUpdatingException(
+                        "The adding task intersects in execution time with an existing task!");
+            }
         }
     }
 
-    private void idCheck(int id) throws NoSuchTaskException {
+    private void idCheck(int id) {
         if (id == 0) {
             throw new NoSuchTaskException("Task has no id!");
         } else if (getAllItems().stream().noneMatch(task -> task.getId() == id)) {
@@ -413,3 +413,4 @@ public class InMemoryTaskManager implements TaskManager {
         }
     }
 }
+

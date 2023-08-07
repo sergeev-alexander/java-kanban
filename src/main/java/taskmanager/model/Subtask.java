@@ -1,10 +1,8 @@
 package taskmanager.model;
 
-import java.util.Objects;
-
 public class Subtask extends Task {
 
-    private int epicId;
+    private int epicId = 0;
 
     @Override
     public Type getType() {
@@ -30,7 +28,9 @@ public class Subtask extends Task {
 
     @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), epicId);
+        int result = super.hashCode();
+        result = 31 * result + epicId;
+        return result;
     }
 
     @Override

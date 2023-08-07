@@ -1,8 +1,5 @@
 package taskmanager.service;
 
-import taskmanager.exceptions.AddingAndUpdatingException;
-import taskmanager.exceptions.NoSuchTaskException;
-
 import java.io.File;
 
 public class Managers {
@@ -15,7 +12,7 @@ public class Managers {
         return new InMemoryTaskManager(getDefaultHistoryManager());
     }
 
-    public static TaskManager getDefaultTaskManager(File backupFile) throws NoSuchTaskException, AddingAndUpdatingException {
+    public static TaskManager getDefaultTaskManager(File backupFile) {
         return new FileBackedTasksManager(getDefaultHistoryManager(), backupFile);
     }
 

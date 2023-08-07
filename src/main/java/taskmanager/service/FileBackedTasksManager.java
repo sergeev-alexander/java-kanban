@@ -1,8 +1,6 @@
 package taskmanager.service;
 
-import taskmanager.exceptions.AddingAndUpdatingException;
 import taskmanager.exceptions.ManagerSaveException;
-import taskmanager.exceptions.NoSuchTaskException;
 import taskmanager.model.*;
 
 import java.io.*;
@@ -14,8 +12,9 @@ import java.util.List;
 public class FileBackedTasksManager extends InMemoryTaskManager {
 
     private final File backupFile;
+    private static final String CSV_HEADER = "id,type,name,status,description,startTime,duration,endTime,epic,subtasks\n";
 
-    public FileBackedTasksManager(HistoryManager historyManager, File file) throws NoSuchTaskException, AddingAndUpdatingException {
+    public FileBackedTasksManager(HistoryManager historyManager, File file) {
         super(historyManager);
         File backupFile = new File("BackupDirectory", String.valueOf(file));
         if (backupFile.exists()) {
@@ -26,63 +25,63 @@ public class FileBackedTasksManager extends InMemoryTaskManager {
         }
     }
 
-    public static FileBackedTasksManager loadFromFile(File file) throws NoSuchTaskException, AddingAndUpdatingException {
+    public static FileBackedTasksManager loadFromFile(File file) throws ManagerSaveException {
         return new FileBackedTasksManager(Managers.getDefaultHistoryManager(), file);
     }
 
     @Override
-    public Task getTask(int taskId) throws NoSuchTaskException {
+    public Task getTask(int taskId) {
         Task task = super.getTask(taskId);
         save();
         return task;
     }
 
     @Override
-    public Epic getEpic(int epicId) throws NoSuchTaskException {
+    public Epic getEpic(int epicId) {
         Epic epic = super.getEpic(epicId);
         save();
         return epic;
     }
 
     @Override
-    public Subtask getSubtask(int subtaskId) throws NoSuchTaskException {
+    public Subtask getSubtask(int subtaskId) {
         Subtask subtask = super.getSubtask(subtaskId);
         save();
         return subtask;
     }
 
     @Override
-    public void updateTask(Task newTask) throws AddingAndUpdatingException, NoSuchTaskException {
+    public void updateTask(Task newTask) {
         super.updateTask(newTask);
         save();
     }
 
     @Override
-    public void addNewTask(Task task) throws AddingAndUpdatingException, NoSuchTaskException {
+    public void addNewTask(Task task) {
         super.addNewTask(task);
         save();
     }
 
     @Override
-    public void updateEpic(Epic newEpic) throws AddingAndUpdatingException, NoSuchTaskException {
+    public void updateEpic(Epic newEpic) {
         super.updateEpic(newEpic);
         save();
     }
 
     @Override
-    public void addNewEpic(Epic epic) throws AddingAndUpdatingException, NoSuchTaskException {
+    public void addNewEpic(Epic epic) {
         super.addNewEpic(epic);
         save();
     }
 
     @Override
-    public void updateSubtask(Subtask newSubtask) throws AddingAndUpdatingException, NoSuchTaskException {
+    public void updateSubtask(Subtask newSubtask) {
         super.updateSubtask(newSubtask);
         save();
     }
 
     @Override
-    public void addNewSubtask(Subtask subtask) throws AddingAndUpdatingException, NoSuchTaskException {
+    public void addNewSubtask(Subtask subtask) {
         super.addNewSubtask(subtask);
         save();
     }
@@ -94,13 +93,13 @@ public class FileBackedTasksManager extends InMemoryTaskManager {
     }
 
     @Override
-    public void deleteTaskById(int id) throws NoSuchTaskException {
+    public void deleteTaskById(int id) {
         super.deleteTaskById(id);
         save();
     }
 
     @Override
-    public void deleteTasksByType(Type type) throws NoSuchTaskException {
+    public void deleteTasksByType(Type type) {
         super.deleteTasksByType(type);
         save();
     }
@@ -126,15 +125,15 @@ public class FileBackedTasksManager extends InMemoryTaskManager {
         }
     }
 
-    private void backup(List<String> lines) throws NoSuchTaskException, AddingAndUpdatingException {
+    private void backup(List<String> lines) {
         if (lines.isEmpty()) {
             return;
         }
         for (int i = 1; i < lines.size() - 1; i++) {
             String[] line = lines.get(i).split(",");
             if (line.length > 1) {
-                switch (line[1]) {
-                    case "TASK":
+                switch (Type.valueOf(line[1])) {
+                    case TASK:
                         Task task = new Task();
                         task.setId(Integer.parseInt(line[0]));
                         task.setTitle(line[2]);
@@ -147,7 +146,7 @@ public class FileBackedTasksManager extends InMemoryTaskManager {
                         taskMap.put(task.getId(), task);
                         prioritySet.add(task);
                         break;
-                    case "EPIC":
+                    case EPIC:
                         Epic epic = new Epic();
                         epic.setId(Integer.parseInt(line[0]));
                         epic.setTitle(line[2]);
@@ -168,9 +167,8 @@ public class FileBackedTasksManager extends InMemoryTaskManager {
                         }
                         epic.setSubTasksIdList(subtaskList);
                         epicMap.put(epic.getId(), epic);
-                        prioritySet.add(epic);
                         break;
-                    case "SUBTASK":
+                    case SUBTASK:
                         Subtask subtask = new Subtask();
                         subtask.setId(Integer.parseInt(line[0]));
                         subtask.setTitle(line[2]);
@@ -219,7 +217,7 @@ public class FileBackedTasksManager extends InMemoryTaskManager {
         List<Task> taskList = getAllItems();
         StringBuilder CSV = new StringBuilder();
         if (!taskList.isEmpty()) {
-            CSV.append("id,type,name,status,description,startTime,duration,endTime,epic,subtasks\n");
+            CSV.append(CSV_HEADER);
             for (Task task : taskList) {
                 CSV.append(task.toString());
             }
@@ -230,6 +228,7 @@ public class FileBackedTasksManager extends InMemoryTaskManager {
             for (Task task : historyList) {
                 CSV.append(task.getId()).append(",");
             }
+            CSV.deleteCharAt(CSV.length() - 1);
         }
         return String.valueOf(CSV);
     }
