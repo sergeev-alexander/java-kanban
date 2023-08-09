@@ -304,13 +304,17 @@ public class Interaction {
             int id = inputToInt(userInput);
             try {
                 if (taskManager.getTasksByType(Type.TASK).contains(taskManager.getTaskById(id))) {
-                    updateTask(taskManager.getTaskById(id));
+                    taskManager.deleteTaskById(id);
+                    updateTask(id);
                     return;
                 } else if (taskManager.getTasksByType(Type.EPIC).contains(taskManager.getTaskById(id))) {
-                    updateEpic((Epic) taskManager.getTaskById(id));
+                    taskManager.deleteTaskById(id);
+                    updateEpic(id);
                     return;
                 } else if (taskManager.getTasksByType(Type.SUBTASK).contains(taskManager.getTaskById(id))) {
-                    updateSubtask((Subtask) taskManager.getTaskById(id));
+                    int epicId = taskManager.getSubtask(id).getEpicId();
+                    taskManager.deleteTaskById(id);
+                    updateSubtask(id, epicId);
                     return;
                 } else {
                     System.out.println("There's no task with [" + userInput + "] id!" +
@@ -345,7 +349,9 @@ public class Interaction {
         }
     }
 
-    private void updateTask(Task task) {
+    private void updateTask(int id) {
+        Task task = new Task();
+        task.setId(id);
         System.out.println("Insert new task title!");
         String title = sc.nextLine();
         task.setTitle(title);
@@ -353,24 +359,35 @@ public class Interaction {
         String description = sc.nextLine();
         task.setDescription(description);
         task.setStatus(updateStatus());
-        System.out.println("Insert new task startDateTime in format \"dd.MM.yyyy HH:mm\"");
-        String startDateTime = sc.nextLine();
-        try {
-            task.setStartTime(ZonedDateTime.of(LocalDateTime.parse(startDateTime, DT_FORMATTER), ZONE_ID));
-        } catch (DateTimeParseException e) {
-            System.out.println("Wrong DateTime format! Try again!");
+        boolean flag = false;
+        while (!flag) {
+            try {
+                System.out.println("Insert new task startDateTime in format \"dd.MM.yyyy HH:mm\"");
+                String startDateTime = sc.nextLine();
+                task.setStartTime(ZonedDateTime.of(LocalDateTime.parse(startDateTime, DT_FORMATTER), ZONE_ID));
+                flag = true;
+            } catch (DateTimeParseException e) {
+                System.out.println("Wrong DateTime format! Try again!");
+            }
         }
-        System.out.println("Insert new task duration (min)");
-        String durationString = sc.nextLine();
-        task.setDuration(inputToInt(durationString));
+        long duration = -1;
+        while (duration == -1) {
+            System.out.println("Insert new task duration (min)");
+            String durationString = sc.nextLine();
+            duration = (inputToInt(durationString));
+        }
+        task.setDuration(duration);
         try {
-            taskManager.updateTask(task);
+            taskManager.addNewTask(task);
         } catch (AddingAndUpdatingException | NoSuchTaskException e) {
             System.out.println(e.getMessage());
         }
     }
 
-    private void updateEpic(Epic epic) {
+
+    private void updateEpic(int id) {
+        Epic epic = new Epic();
+        epic.setId(id);
         System.out.println("Insert new epic title!");
         String title = sc.nextLine();
         epic.setTitle(title);
@@ -384,23 +401,34 @@ public class Interaction {
         }
     }
 
-    private void updateSubtask(Subtask subtask) {
+    private void updateSubtask(int id, int epicId) {
+        Subtask subtask = new Subtask();
+        subtask.setId(id);
+        subtask.setEpicId(epicId);
         System.out.println("Insert new subtask title!");
         String title = sc.nextLine();
         subtask.setTitle(title);
         System.out.println("Insert new subtask description!");
         String description = sc.nextLine();
         subtask.setDescription(description);
-        System.out.println("Insert new subtask startDateTime in format \"dd.MM.yyyy HH:mm\"");
-        String startDateTime = sc.nextLine();
-        try {
-            subtask.setStartTime(ZonedDateTime.of(LocalDateTime.parse(startDateTime, DT_FORMATTER), ZONE_ID));
-        } catch (DateTimeParseException e) {
-            System.out.println("Wrong DateTime format! Try again!");
+        boolean flag = false;
+        while (!flag) {
+            try {
+                System.out.println("Insert new subtask startDateTime in format \"dd.MM.yyyy HH:mm\"");
+                String startDateTime = sc.nextLine();
+                subtask.setStartTime(ZonedDateTime.of(LocalDateTime.parse(startDateTime, DT_FORMATTER), ZONE_ID));
+                flag = true;
+            } catch (DateTimeParseException e) {
+                System.out.println("Wrong DateTime format! Try again!");
+            }
         }
-        System.out.println("Insert new subtask duration (min)");
-        String durationString = sc.nextLine();
-        subtask.setDuration(inputToInt(durationString));
+        long duration = -1;
+        while (duration == -1) {
+            System.out.println("Insert new subtask duration (min)");
+            String durationString = sc.nextLine();
+            duration = (inputToInt(durationString));
+        }
+        subtask.setDuration(duration);
         subtask.setStatus(updateStatus());
         try {
             taskManager.updateSubtask(subtask);

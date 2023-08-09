@@ -9,7 +9,7 @@ import java.util.*;
 
 public class InMemoryTaskManager implements TaskManager {
 
-    private int id = 1;
+    protected int id = 1;
 
     protected final Set<Task> prioritySet = new TreeSet<>(Comparator.comparing
                     ((Task::getStartTime), Comparator.nullsFirst(Comparator.reverseOrder()))
@@ -23,6 +23,11 @@ public class InMemoryTaskManager implements TaskManager {
 
     public InMemoryTaskManager(HistoryManager historyManager) {
         this.historyManager = historyManager;
+    }
+
+    @Override
+    public int getIdField() {
+        return id;
     }
 
     @Override
@@ -105,7 +110,6 @@ public class InMemoryTaskManager implements TaskManager {
         existingTask.setStartTime(newTask.getStartTime());
         existingTask.setDuration(newTask.getDuration());
         prioritySet.add(existingTask);
-        taskMap.put(existingTask.getId(), existingTask);
     }
 
     @Override
@@ -118,7 +122,6 @@ public class InMemoryTaskManager implements TaskManager {
         existingEpic.setEndTime(null);
         existingEpic.setTitle(newEpic.getTitle());
         existingEpic.setDescription(newEpic.getDescription());
-        epicMap.put(existingEpic.getId(), existingEpic);
         updateEpicFields(existingEpic.getId());
     }
 
@@ -140,7 +143,6 @@ public class InMemoryTaskManager implements TaskManager {
         existingSubtask.setStartTime(newSubtask.getStartTime());
         existingSubtask.setDuration(newSubtask.getDuration());
         prioritySet.add(existingSubtask);
-        subtaskMap.put(existingSubtask.getId(), existingSubtask);
         epicMap.get(existingSubtask.getEpicId()).addSubtasksIdToEpicList(existingSubtask.getId());
         updateEpicFields(existingSubtask.getEpicId());
     }
@@ -379,19 +381,15 @@ public class InMemoryTaskManager implements TaskManager {
     }
 
     private void intersectingCheck(Task newTask) {
-        if (newTask.getStartTime() == null || newTask.getDuration() == 0 || prioritySet.isEmpty()) {
+        if (newTask.getStartTime() == null || prioritySet.isEmpty()) {
             return;
         }
         if (newTask.getEndTime().isBefore(newTask.getStartTime())) {
             throw new AddingAndUpdatingException(
-                    "The adding task end time is before start time!");
-        }
-        if (newTask.getStartTime().isAfter(newTask.getEndTime())) {
-            throw new AddingAndUpdatingException(
-                    "The adding task start time is after end time!");
+                    "The adding task end time is before start time or start time is after end time!");
         }
         for (Task task : prioritySet) {
-            if (task.getStartTime() == null || task.getDuration() == 0) {
+            if (task.getStartTime() == null) {
                 return;
             }
             if (task.getId() == newTask.getId()) {
@@ -412,5 +410,6 @@ public class InMemoryTaskManager implements TaskManager {
             throw new NoSuchTaskException("There's no task with such id!");
         }
     }
+
 }
 

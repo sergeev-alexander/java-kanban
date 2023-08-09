@@ -48,11 +48,17 @@ abstract class TaskManagerTest<T extends TaskManager> {
             loadedManager = FileBackedTasksManager.loadFromFile(new File("Test_backup_file.csv"));
         } else {
             loadedManager = manager;
+            manager = (T) FileBackedTasksManager.loadFromFile(new File("Test_backup_file.csv"));
         }
         assertEquals(manager.getAllItems(), loadedManager.getAllItems(), "All items are not equal to loaded items!");
         assertEquals(manager.getHistory(), loadedManager.getHistory(), "History is not equal to loaded history!");
         assertEquals(manager.getPrioritizedTasks(), loadedManager.getPrioritizedTasks(),
                 "Prioritized list is not equal to loaded prioritized list!");
+        assertEquals(manager.getAllTasks(), loadedManager.getAllTasks(), "All tasks are not equal to loaded tasks!");
+        assertEquals(manager.getAllEpics(), loadedManager.getAllEpics(), "All epics are not equal to loaded epics!");
+        assertEquals(manager.getAllSubtasks(), loadedManager.getAllSubtasks(),
+                "All subtasks are not equal to loaded subtasks!");
+        assertEquals(manager.getIdField(), loadedManager.getIdField(), "Id field is not equal to loaded id field!");
     }
 
     /**
@@ -938,7 +944,7 @@ abstract class TaskManagerTest<T extends TaskManager> {
         assertTrue(manager.getPrioritizedTasks().isEmpty(), "Received wrong priority list!");
     }
 
-    private List<Task> createSomeTasks() {
+    List<Task> createSomeTasks() {
         Task task = new Task();
         task.setStatus(Status.NEW);
         task.setTitle("Test_title");

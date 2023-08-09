@@ -30,6 +30,11 @@ public class FileBackedTasksManager extends InMemoryTaskManager {
     }
 
     @Override
+    public int getIdField() {
+        return super.getIdField();
+    }
+
+    @Override
     public Task getTask(int taskId) {
         Task task = super.getTask(taskId);
         save();
@@ -137,7 +142,9 @@ public class FileBackedTasksManager extends InMemoryTaskManager {
                         Task task = new Task();
                         task.setId(Integer.parseInt(line[0]));
                         task.setTitle(line[2]);
-                        task.setStatus(identifyStatus(line[3]));
+                        if (!line[3].equals("null")) {
+                            task.setStatus(Status.valueOf(line[3]));
+                        }
                         task.setDescription(line[4]);
                         if (!line[5].equals("null")) {
                             task.setStartTime(ZonedDateTime.parse(line[5]));
@@ -150,7 +157,9 @@ public class FileBackedTasksManager extends InMemoryTaskManager {
                         Epic epic = new Epic();
                         epic.setId(Integer.parseInt(line[0]));
                         epic.setTitle(line[2]);
-                        epic.setStatus(identifyStatus(line[3]));
+                        if (!line[3].equals("null")) {
+                            epic.setStatus(Status.valueOf(line[3]));
+                        }
                         epic.setDescription(line[4]);
                         if (!line[5].equals("null")) {
                             epic.setStartTime(ZonedDateTime.parse(line[5]));
@@ -172,7 +181,9 @@ public class FileBackedTasksManager extends InMemoryTaskManager {
                         Subtask subtask = new Subtask();
                         subtask.setId(Integer.parseInt(line[0]));
                         subtask.setTitle(line[2]);
-                        subtask.setStatus(identifyStatus(line[3]));
+                        if (!line[3].equals("null")) {
+                            subtask.setStatus(Status.valueOf(line[3]));
+                        }
                         subtask.setDescription(line[4]);
                         if (!line[5].equals("null")) {
                             subtask.setStartTime(ZonedDateTime.parse(line[5]));
@@ -191,18 +202,16 @@ public class FileBackedTasksManager extends InMemoryTaskManager {
                 historyManager.add(getTaskById(Integer.parseInt(historyLine[k])));
             }
         }
-    }
-
-    private Status identifyStatus(String status) {
-        switch (status) {
-            case "NEW":
-                return Status.NEW;
-            case "IN_PROGRESS":
-                return Status.IN_PROGRESS;
-            case "DONE":
-                return Status.DONE;
+        int maxId = 0;
+        List<Task> allTasks = getAllItems();
+        if (!allTasks.isEmpty()) {
+            for (Task task : allTasks) {
+                if (task.getId() > maxId) {
+                    maxId = task.getId();
+                }
+            }
         }
-        return null;
+        id = maxId;
     }
 
     private void save() {
