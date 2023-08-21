@@ -213,16 +213,6 @@ public class HttpTaskServer {
                     throw new HttpException("Unknown request path!");
             }
 
-            System.out.println("\nNEW REQUEST");
-            System.out.println("Request uri: " + requestURI);
-            System.out.println("Request method: " + requestMethod);
-            System.out.println("Request path: " + requestPath);
-            System.out.println("Id : " + id);
-            System.out.println("Request body: " + requestBody);
-            System.out.println("Response body: " + responseBody);
-            System.out.println("Response code: " + responseCode);
-
-
             exchange.sendResponseHeaders(responseCode, 0);
 
             try (OutputStream outputStream = exchange.getResponseBody()) {
@@ -230,6 +220,7 @@ public class HttpTaskServer {
             }
         }
     }
+
 }
 
 
