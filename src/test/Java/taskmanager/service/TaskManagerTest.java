@@ -1,15 +1,14 @@
 package taskmanager.service;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import taskmanager.model.*;
-import taskmanager.exceptions.NoSuchTaskException;
 import taskmanager.exceptions.AddingAndUpdatingException;
+import taskmanager.exceptions.NoSuchTaskException;
+import taskmanager.model.*;
 
-import java.io.File;
+import java.io.IOException;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
@@ -19,16 +18,22 @@ import static org.junit.jupiter.api.Assertions.*;
 abstract class TaskManagerTest<T extends TaskManager> {
 
     public static DateTimeFormatter DT_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
-    public static ZoneId ZONE_ID = ZoneId.of("Europe/Moscow");
 
     private T manager;
 
-    abstract T getManager();
+    protected T getManager() throws IOException, InterruptedException {
+        return null;
+    }
 
     @BeforeEach
-    public void setUp() {
+    public void setUp() throws IOException, InterruptedException {
         manager = getManager();
         manager.deleteAllItems();
+    }
+
+    @AfterEach
+    public void stopServer() {
+        manager.stopServer();
     }
 
     /**
@@ -45,10 +50,10 @@ abstract class TaskManagerTest<T extends TaskManager> {
         manager.getTaskById(3);
         TaskManager loadedManager;
         if (manager instanceof InMemoryTaskManagerTest) {
-            loadedManager = FileBackedTasksManager.loadFromFile(new File("Test_backup_file.csv"));
+            loadedManager = FileBackedTasksManager.loadBackup("Test_backup_file.csv");
         } else {
             loadedManager = manager;
-            manager = (T) FileBackedTasksManager.loadFromFile(new File("Test_backup_file.csv"));
+            manager = (T) FileBackedTasksManager.loadBackup("Test_backup_file.csv");
         }
         assertEquals(manager.getAllItems(), loadedManager.getAllItems(), "All items are not equal to loaded items!");
         assertEquals(manager.getHistory(), loadedManager.getHistory(), "History is not equal to loaded history!");
@@ -99,7 +104,7 @@ abstract class TaskManagerTest<T extends TaskManager> {
         manager.addNewTask(addingTasks.get(0));
         TaskManager loadedManager;
         if (manager instanceof InMemoryTaskManagerTest) {
-            loadedManager = FileBackedTasksManager.loadFromFile(new File("Test_backup_file.csv"));
+            loadedManager = FileBackedTasksManager.loadBackup("Test_backup_file.csv");
         } else {
             loadedManager = manager;
         }
@@ -115,7 +120,7 @@ abstract class TaskManagerTest<T extends TaskManager> {
         manager.addNewTask(addingTasks.get(0));
         TaskManager loadedManager;
         if (manager instanceof InMemoryTaskManagerTest) {
-            loadedManager = FileBackedTasksManager.loadFromFile(new File("Test_backup_file.csv"));
+            loadedManager = FileBackedTasksManager.loadBackup("Test_backup_file.csv");
         } else {
             loadedManager = manager;
         }
@@ -241,7 +246,7 @@ abstract class TaskManagerTest<T extends TaskManager> {
         task.setStatus(Status.NEW);
         task.setTitle("Updated_title");
         task.setDescription("Updated_description");
-        task.setStartTime(ZonedDateTime.of(LocalDateTime.parse("02.02.2022 22:22", DT_FORMATTER), ZONE_ID));
+        task.setStartTime(LocalDateTime.parse("02.02.2022 22:22", DT_FORMATTER));
         task.setDuration(20L);
         manager.updateTask(task);
         assertEquals(task, manager.getTaskById(1), "Task wasn't updated!");
@@ -303,10 +308,10 @@ abstract class TaskManagerTest<T extends TaskManager> {
     @Test
     void whenTryToAddTaskWithIntersectedRuntimeOfAnExistingTaskShouldBeThrownAnException() {
         Task task1 = new Task();
-        task1.setStartTime(ZonedDateTime.of(LocalDateTime.parse("01.01.2023 00:00", DT_FORMATTER), ZONE_ID));
+        task1.setStartTime(LocalDateTime.parse("01.01.2023 00:00", DT_FORMATTER));
         task1.setDuration(10);
         Task task2 = new Task();
-        task2.setStartTime(ZonedDateTime.of(LocalDateTime.parse("01.01.2023 00:05", DT_FORMATTER), ZONE_ID));
+        task2.setStartTime(LocalDateTime.parse("01.01.2023 00:05", DT_FORMATTER));
         task2.setDuration(10);
         String exceptionMessage = null;
         try {
@@ -359,7 +364,7 @@ abstract class TaskManagerTest<T extends TaskManager> {
         Epic epic = new Epic();
         epic.setId(1);
         epic.setStatus(Status.NEW);
-        epic.setStartTime(ZonedDateTime.of(LocalDateTime.parse("01.01.2023 00:00", DT_FORMATTER), ZONE_ID));
+        epic.setStartTime(LocalDateTime.parse("01.01.2023 00:00", DT_FORMATTER));
         epic.setDuration(10);
         manager.updateEpic(epic);
         assertNull(manager.getEpic(1).getStartTime(), "Start time of the updated epic wasn't cleared!");
@@ -396,7 +401,7 @@ abstract class TaskManagerTest<T extends TaskManager> {
     void whenTryToAddNewEpicWithStartTimeAndDurationTheyShouldBeCleared() {
         List<Task> addingTasks = createSomeTasks();
         Epic epic = (Epic) addingTasks.get(1);
-        epic.setStartTime(ZonedDateTime.of(LocalDateTime.parse("01.01.2023 00:00", DT_FORMATTER), ZONE_ID));
+        epic.setStartTime(LocalDateTime.parse("01.01.2023 00:00", DT_FORMATTER));
         epic.setDuration(10);
         manager.addNewEpic(epic);
         assertNull(manager.getEpic(1).getStartTime(), "Start time of the added epic wasn't cleared!");
@@ -493,11 +498,11 @@ abstract class TaskManagerTest<T extends TaskManager> {
         subtask1.setEpicId(1);
         subtask2.setEpicId(1);
         subtask3.setEpicId(1);
-        subtask1.setStartTime(ZonedDateTime.of(LocalDateTime.parse("01.01.2023 00:00", DT_FORMATTER), ZONE_ID));
+        subtask1.setStartTime(LocalDateTime.parse("01.01.2023 00:00", DT_FORMATTER));
         subtask1.setDuration(5);
-        subtask2.setStartTime(ZonedDateTime.of(LocalDateTime.parse("02.01.2023 12:00", DT_FORMATTER), ZONE_ID));
+        subtask2.setStartTime(LocalDateTime.parse("02.01.2023 12:00", DT_FORMATTER));
         subtask2.setDuration(25);
-        subtask3.setStartTime(ZonedDateTime.of(LocalDateTime.parse("03.01.2023 01:30", DT_FORMATTER), ZONE_ID));
+        subtask3.setStartTime(LocalDateTime.parse("03.01.2023 01:30", DT_FORMATTER));
         subtask3.setDuration(30);
         manager.addNewEpic((Epic) addingTasks.get(1));
         manager.addNewSubtask(subtask1);
@@ -522,11 +527,11 @@ abstract class TaskManagerTest<T extends TaskManager> {
         subtask1.setEpicId(1);
         subtask2.setEpicId(1);
         subtask3.setEpicId(1);
-        subtask1.setStartTime(ZonedDateTime.of(LocalDateTime.parse("01.01.2023 00:00", DT_FORMATTER), ZONE_ID));
+        subtask1.setStartTime(LocalDateTime.parse("01.01.2023 00:00", DT_FORMATTER));
         subtask1.setDuration(5);
-        subtask2.setStartTime(ZonedDateTime.of(LocalDateTime.parse("02.01.2023 12:00", DT_FORMATTER), ZONE_ID));
+        subtask2.setStartTime(LocalDateTime.parse("02.01.2023 12:00", DT_FORMATTER));
         subtask2.setDuration(25);
-        subtask3.setStartTime(ZonedDateTime.of(LocalDateTime.parse("03.01.2023 01:30", DT_FORMATTER), ZONE_ID));
+        subtask3.setStartTime(LocalDateTime.parse("03.01.2023 01:30", DT_FORMATTER));
         subtask3.setDuration(30);
         manager.addNewEpic((Epic) addingTasks.get(1));
         manager.addNewSubtask(subtask1);
@@ -571,7 +576,7 @@ abstract class TaskManagerTest<T extends TaskManager> {
         newSubtask.setTitle("Updated_Title");
         newSubtask.setDescription("Updated_Description");
         newSubtask.setStatus(Status.DONE);
-        newSubtask.setStartTime(ZonedDateTime.of(LocalDateTime.parse("01.01.2023 01:00", DT_FORMATTER), ZONE_ID));
+        newSubtask.setStartTime(LocalDateTime.parse("01.01.2023 01:00", DT_FORMATTER));
         newSubtask.setDuration(20);
         manager.updateSubtask(newSubtask);
         assertEquals(newSubtask, manager.getSubtask(2), "Updated subtask is not equal to received subtask!");
@@ -587,7 +592,7 @@ abstract class TaskManagerTest<T extends TaskManager> {
         manager.addNewEpic((Epic) addingTasks.get(1));
         manager.addNewSubtask((Subtask) addingTasks.get(2));
         Subtask subtask = (Subtask) addingTasks.get(2);
-        subtask.setStartTime(ZonedDateTime.of(LocalDateTime.parse("01.01.2023 00:00", DT_FORMATTER), ZONE_ID));
+        subtask.setStartTime(LocalDateTime.parse("01.01.2023 00:00", DT_FORMATTER));
         String exceptionMessage = null;
         try {
             manager.updateSubtask(subtask);
@@ -655,10 +660,10 @@ abstract class TaskManagerTest<T extends TaskManager> {
     @Test
     void whenTryToAddSubtaskWithIntersectedRuntimeOfAnExistingTaskShouldBeThrownAnException() {
         Task task = new Task();
-        task.setStartTime(ZonedDateTime.of(LocalDateTime.parse("01.01.2023 00:00", DT_FORMATTER), ZONE_ID));
+        task.setStartTime(LocalDateTime.parse("01.01.2023 00:00", DT_FORMATTER));
         task.setDuration(10);
         Subtask subtask = new Subtask();
-        subtask.setStartTime(ZonedDateTime.of(LocalDateTime.parse("01.01.2023 00:09", DT_FORMATTER), ZONE_ID));
+        subtask.setStartTime(LocalDateTime.parse("01.01.2023 00:09", DT_FORMATTER));
         subtask.setDuration(10);
         manager.addNewTask(task);
         String exceptionMessage = null;
@@ -943,13 +948,12 @@ abstract class TaskManagerTest<T extends TaskManager> {
     void whenTryToGetPrioritizedTasksInTheirAbsenceShouldReceiveAnEmptyList() {
         assertTrue(manager.getPrioritizedTasks().isEmpty(), "Received wrong priority list!");
     }
-
     List<Task> createSomeTasks() {
         Task task = new Task();
         task.setStatus(Status.NEW);
         task.setTitle("Test_title");
         task.setDescription("Test_description");
-        task.setStartTime(ZonedDateTime.of(LocalDateTime.parse("01.01.2023 00:00", DT_FORMATTER), ZONE_ID));
+        task.setStartTime(LocalDateTime.parse("01.01.2023 00:00", DT_FORMATTER));
         task.setDuration(10L);
 
         Epic epic = new Epic();
@@ -962,7 +966,7 @@ abstract class TaskManagerTest<T extends TaskManager> {
         subtask.setEpicId(2);
         subtask.setTitle("Test_title");
         subtask.setDescription("Test_description");
-        subtask.setStartTime(ZonedDateTime.of(LocalDateTime.parse("01.01.2023 00:10", DT_FORMATTER), ZONE_ID));
+        subtask.setStartTime(LocalDateTime.parse("01.01.2023 00:10", DT_FORMATTER));
         subtask.setDuration(10L);
 
         List<Task> taskList = new ArrayList<>();

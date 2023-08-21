@@ -4,7 +4,7 @@ import taskmanager.exceptions.AddingAndUpdatingException;
 import taskmanager.exceptions.NoSuchTaskException;
 import taskmanager.model.*;
 
-import java.time.ZonedDateTime;
+import java.time.LocalDateTime;
 import java.util.*;
 
 public class InMemoryTaskManager implements TaskManager {
@@ -28,6 +28,10 @@ public class InMemoryTaskManager implements TaskManager {
     @Override
     public int getIdField() {
         return id;
+    }
+
+    @Override
+    public void stopServer() {
     }
 
     @Override
@@ -299,6 +303,14 @@ public class InMemoryTaskManager implements TaskManager {
 
     }
 
+    public void idCheck(int id) {
+        if (id == 0) {
+            throw new NoSuchTaskException("Task has no id!");
+        } else if (getAllItems().stream().noneMatch(task -> task.getId() == id)) {
+            throw new NoSuchTaskException("There's no task with such id!");
+        }
+    }
+
     private int createId() {
         int maxId = 0;
         List<Task> allTasks = getAllItems();
@@ -357,7 +369,7 @@ public class InMemoryTaskManager implements TaskManager {
         if (!epic.getSubTasksIdList().isEmpty()) {
             List<Subtask> subtasksIdList = getEpicsSubtasksById(epicId);
             long epicDuration = 0;
-            TreeSet<ZonedDateTime> timeSet = new TreeSet<>((startTime1, startTime2) ->
+            TreeSet<LocalDateTime> timeSet = new TreeSet<>((startTime1, startTime2) ->
                     startTime1.isBefore(startTime2) ? -1 : startTime1.isAfter(startTime2) ? 1 : 0);
             for (Subtask subtask : subtasksIdList) {
                 if (subtask.getStartTime() != null) {
@@ -400,14 +412,6 @@ public class InMemoryTaskManager implements TaskManager {
                 throw new AddingAndUpdatingException(
                         "The adding task intersects in execution time with an existing task!");
             }
-        }
-    }
-
-    private void idCheck(int id) {
-        if (id == 0) {
-            throw new NoSuchTaskException("Task has no id!");
-        } else if (getAllItems().stream().noneMatch(task -> task.getId() == id)) {
-            throw new NoSuchTaskException("There's no task with such id!");
         }
     }
 

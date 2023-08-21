@@ -2,14 +2,13 @@ package taskmanager;
 
 import taskmanager.exceptions.AddingAndUpdatingException;
 import taskmanager.exceptions.NoSuchTaskException;
+import taskmanager.service.HttpTaskManager;
 import taskmanager.model.*;
-import taskmanager.service.FileBackedTasksManager;
 import taskmanager.service.TaskManager;
 
-import java.io.File;
+import java.io.IOException;
+import java.net.URI;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.List;
@@ -18,15 +17,15 @@ import java.util.Scanner;
 public class Interaction {
 
     public static DateTimeFormatter DT_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
-    public static ZoneId ZONE_ID = ZoneId.of("Europe/Moscow");
 
-    TaskManager taskManager = FileBackedTasksManager.loadFromFile(new File("Backup_file_1.csv"));
+    public static URI URL = URI.create("http://localhost:8078/");
     Scanner sc = new Scanner(System.in);
+    TaskManager taskManager = new HttpTaskManager(URL);
 
-    public Interaction() throws NoSuchTaskException, AddingAndUpdatingException {
+    public Interaction() throws IOException, InterruptedException {
     }
 
-    public void interaction() {
+    public void interaction() throws IOException, InterruptedException {
         while (true) {
             printMenu();
             String input = sc.nextLine();
@@ -94,7 +93,8 @@ public class Interaction {
                     System.out.println(taskManager.getPrioritizedTasks());
                     break;
                 case 0:
-                    System.out.println("Good bye!");
+                    System.out.println("Good buy!");
+                    taskManager.stopServer();
                     return;
                 default:
                     System.out.println("[" + input + "] - Wrong command!" +
@@ -117,7 +117,7 @@ public class Interaction {
                 "\n(9)  - Show subtasks of an epic" +
                 "\n(10) - Show history of views" +
                 "\n(11) - Show PrioritizedTasks list" +
-                "\n(0) - Exit app");
+                "\n(0) - Exit");
     }
 
     private int userSelectTaskType() {
@@ -221,7 +221,7 @@ public class Interaction {
         System.out.println("Insert task startDateTime in format \"dd.MM.yyyy HH:mm\"");
         String startDateTime = sc.nextLine();
         try {
-            task.setStartTime(ZonedDateTime.of(LocalDateTime.parse(startDateTime, DT_FORMATTER), ZONE_ID));
+            task.setStartTime(LocalDateTime.parse(startDateTime, DT_FORMATTER));
         } catch (DateTimeParseException e) {
             System.out.println("Wrong DateTime format! Try again!");
         }
@@ -265,7 +265,7 @@ public class Interaction {
         System.out.println("Insert subtask startDateTime in format \"dd.MM.yyyy HH:mm\"");
         String startDateTime = sc.nextLine();
         try {
-            subtask.setStartTime(ZonedDateTime.of(LocalDateTime.parse(startDateTime, DT_FORMATTER), ZONE_ID));
+            subtask.setStartTime(LocalDateTime.parse(startDateTime, DT_FORMATTER));
         } catch (DateTimeParseException e) {
             System.out.println("Wrong DateTime format! Try again!");
         }
@@ -364,7 +364,7 @@ public class Interaction {
             try {
                 System.out.println("Insert new task startDateTime in format \"dd.MM.yyyy HH:mm\"");
                 String startDateTime = sc.nextLine();
-                task.setStartTime(ZonedDateTime.of(LocalDateTime.parse(startDateTime, DT_FORMATTER), ZONE_ID));
+                task.setStartTime(LocalDateTime.parse(startDateTime, DT_FORMATTER));
                 flag = true;
             } catch (DateTimeParseException e) {
                 System.out.println("Wrong DateTime format! Try again!");
@@ -416,7 +416,7 @@ public class Interaction {
             try {
                 System.out.println("Insert new subtask startDateTime in format \"dd.MM.yyyy HH:mm\"");
                 String startDateTime = sc.nextLine();
-                subtask.setStartTime(ZonedDateTime.of(LocalDateTime.parse(startDateTime, DT_FORMATTER), ZONE_ID));
+                subtask.setStartTime(LocalDateTime.parse(startDateTime, DT_FORMATTER));
                 flag = true;
             } catch (DateTimeParseException e) {
                 System.out.println("Wrong DateTime format! Try again!");

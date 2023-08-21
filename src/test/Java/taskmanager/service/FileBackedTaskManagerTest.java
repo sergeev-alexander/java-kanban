@@ -5,7 +5,6 @@ import taskmanager.model.Epic;
 import taskmanager.model.Subtask;
 import taskmanager.model.Task;
 
-import java.io.File;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -14,7 +13,7 @@ public class FileBackedTaskManagerTest extends TaskManagerTest<FileBackedTasksMa
 
     @Override
     public FileBackedTasksManager getManager() {
-        return (FileBackedTasksManager) Managers.getDefaultTaskManager(new File("Test_backup_file.csv"));
+        return (FileBackedTasksManager) Managers.getDefaultTaskManager("Test_backup_file.csv");
     }
 
     @Test
@@ -28,7 +27,7 @@ public class FileBackedTaskManagerTest extends TaskManagerTest<FileBackedTasksMa
         manager.getTaskById(2);
         manager.getTaskById(3);
 
-        TaskManager loadedManager = FileBackedTasksManager.loadFromFile(new File("Test_backup_file.csv"));
+        TaskManager loadedManager = FileBackedTasksManager.loadBackup("Test_backup_file.csv");
 
         assertEquals(manager.getAllItems(), loadedManager.getAllItems(), "All items are not equal to loaded items!");
         assertEquals(manager.getHistory(), loadedManager.getHistory(), "History is not equal to loaded history!");
@@ -51,7 +50,8 @@ public class FileBackedTaskManagerTest extends TaskManagerTest<FileBackedTasksMa
         manager.getTaskById(1);
         manager.getTaskById(2);
         manager.getTaskById(3);
-        TaskManager loadedManager = FileBackedTasksManager.loadFromFile(new File("Test_backup_file.csv"));
+        TaskManager loadedManager = FileBackedTasksManager.loadBackup("Test_backup_file.csv");
         assertEquals(manager.getIdField(), loadedManager.getIdField(), "Id field is not equal to loaded id field!");
     }
+
 }

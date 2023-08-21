@@ -53,4 +53,6 @@ public interface TaskManager {
 
     int getIdField();
 
+    void stopServer();
+
 }

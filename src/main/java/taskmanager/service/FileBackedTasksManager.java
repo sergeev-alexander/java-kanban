@@ -5,18 +5,21 @@ import taskmanager.model.*;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.time.ZonedDateTime;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
 public class FileBackedTasksManager extends InMemoryTaskManager {
 
-    private final File backupFile;
+    private File backupFile;
     private static final String CSV_HEADER = "id,type,name,status,description,startTime,duration,endTime,epic,subtasks\n";
 
-    public FileBackedTasksManager(HistoryManager historyManager, File file) {
+    public FileBackedTasksManager() {
+        super(Managers.getDefaultHistoryManager());
+    }
+    public FileBackedTasksManager(HistoryManager historyManager, String backupFileName) {
         super(historyManager);
-        File backupFile = new File("BackupDirectory", String.valueOf(file));
+        File backupFile = new File("BackupDirectory", backupFileName);
         if (backupFile.exists()) {
             this.backupFile = backupFile;
             backup(load(backupFile));
@@ -25,8 +28,8 @@ public class FileBackedTasksManager extends InMemoryTaskManager {
         }
     }
 
-    public static FileBackedTasksManager loadFromFile(File file) throws ManagerSaveException {
-        return new FileBackedTasksManager(Managers.getDefaultHistoryManager(), file);
+    public static FileBackedTasksManager loadBackup(String backupFileName) throws ManagerSaveException {
+        return new FileBackedTasksManager(Managers.getDefaultHistoryManager(), backupFileName);
     }
 
     @Override
@@ -109,6 +112,11 @@ public class FileBackedTasksManager extends InMemoryTaskManager {
         save();
     }
 
+    @Override
+    public void idCheck(int id) {
+        super.idCheck(id);
+    }
+
     private File createNewBackupFile(File newBackupFile) throws ManagerSaveException {
         try {
             newBackupFile.createNewFile();
@@ -130,7 +138,7 @@ public class FileBackedTasksManager extends InMemoryTaskManager {
         }
     }
 
-    private void backup(List<String> lines) {
+    protected void backup(List<String> lines) {
         if (lines.isEmpty()) {
             return;
         }
@@ -147,7 +155,7 @@ public class FileBackedTasksManager extends InMemoryTaskManager {
                         }
                         task.setDescription(line[4]);
                         if (!line[5].equals("null")) {
-                            task.setStartTime(ZonedDateTime.parse(line[5]));
+                            task.setStartTime(LocalDateTime.parse(line[5]));
                         }
                         task.setDuration(Long.parseLong(line[6]));
                         taskMap.put(task.getId(), task);
@@ -162,11 +170,11 @@ public class FileBackedTasksManager extends InMemoryTaskManager {
                         }
                         epic.setDescription(line[4]);
                         if (!line[5].equals("null")) {
-                            epic.setStartTime(ZonedDateTime.parse(line[5]));
+                            epic.setStartTime(LocalDateTime.parse(line[5]));
                         }
                         epic.setDuration(Long.parseLong(line[6]));
                         if (!line[7].equals("null")) {
-                            epic.setEndTime(ZonedDateTime.parse(line[7]));
+                            epic.setEndTime(LocalDateTime.parse(line[7]));
                         }
                         List<Integer> subtaskList = new ArrayList<>();
                         for (int j = 9; j < line.length; j++) {
@@ -186,7 +194,7 @@ public class FileBackedTasksManager extends InMemoryTaskManager {
                         }
                         subtask.setDescription(line[4]);
                         if (!line[5].equals("null")) {
-                            subtask.setStartTime(ZonedDateTime.parse(line[5]));
+                            subtask.setStartTime(LocalDateTime.parse(line[5]));
                         }
                         subtask.setDuration(Long.parseLong(line[6]));
                         subtask.setEpicId(Integer.parseInt(line[8]));
@@ -214,7 +222,7 @@ public class FileBackedTasksManager extends InMemoryTaskManager {
         id = maxId;
     }
 
-    private void save() {
+    protected void save() {
         try (FileWriter writer = new FileWriter(backupFile, StandardCharsets.UTF_8)) {
             writer.write(createCSV());
         } catch (IOException e) {

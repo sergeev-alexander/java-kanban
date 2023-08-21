@@ -1,6 +1,6 @@
 id,type,name,status,description,startTime,duration,endTime,epic,subtasks
-1,TASK,Test_title,NEW,Test_description,2023-01-01T00:00+03:00[Europe/Moscow],10,2023-01-01T00:10+03:00[Europe/Moscow]
-2,EPIC,Test_title,NEW,Test_description,2023-01-01T00:10+03:00[Europe/Moscow],10,2023-01-01T00:20+03:00[Europe/Moscow],-,3,
-3,SUBTASK,Test_title,NEW,Test_description,2023-01-01T00:10+03:00[Europe/Moscow],10,2023-01-01T00:20+03:00[Europe/Moscow],2
+1,TASK,Test_title,NEW,Test_description,2023-01-01T00:00,10,2023-01-01T00:10
+2,EPIC,Test_title,NEW,Test_description,2023-01-01T00:10,10,2023-01-01T00:20,-,3,
+3,SUBTASK,Test_title,NEW,Test_description,2023-01-01T00:10,10,2023-01-01T00:20,2
 
 3,2,1

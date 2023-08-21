@@ -12,7 +12,7 @@ public class InMemoryHistoryManager implements HistoryManager {
     private Node first;
     private Node last;
 
-    private final Map<Integer, Node> historyViewsMap = new HashMap<>();
+    public static Map<Integer, Node> historyViewsMap = new HashMap<>();
 
     @Override
     public List<Task> getHistory() {
@@ -35,7 +35,6 @@ public class InMemoryHistoryManager implements HistoryManager {
         } else {
             Node newPreviousNode = last;
             last = new Node(newPreviousNode, task, null);
-            newPreviousNode.next = last;
         }
         historyViewsMap.put(task.getId(), last);
     }

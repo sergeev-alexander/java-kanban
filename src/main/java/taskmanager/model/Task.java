@@ -1,17 +1,17 @@
 package taskmanager.model;
 
-import java.time.ZonedDateTime;
+import java.time.LocalDateTime;
 import java.util.Objects;
 
 public class Task {
 
+    private final Type type = getType();
     private int id;
     private Status status;
     private String title;
     private String description;
-    private ZonedDateTime startTime;
+    private LocalDateTime startTime;
     private long duration;
-
 
     public int getId() {
         return id;
@@ -49,11 +49,11 @@ public class Task {
         this.description = description;
     }
 
-    public ZonedDateTime getStartTime() {
+    public LocalDateTime getStartTime() {
         return startTime;
     }
 
-    public void setStartTime(ZonedDateTime startTime) {
+    public void setStartTime(LocalDateTime startTime) {
         this.startTime = startTime;
     }
 
@@ -65,7 +65,7 @@ public class Task {
         this.duration = duration;
     }
 
-    public ZonedDateTime getEndTime() {
+    public LocalDateTime getEndTime() {
         if (startTime != null) {
             return startTime.plusMinutes(duration);
         } else {

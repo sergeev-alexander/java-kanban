@@ -1,6 +1,6 @@
 package taskmanager.model;
 
-import java.time.ZonedDateTime;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -8,7 +8,7 @@ import java.util.Objects;
 public class Epic extends Task {
 
     private List<Integer> subTasksIdList = new ArrayList<>();
-    private ZonedDateTime endTime;
+    private LocalDateTime endTime;
 
     @Override
     public Type getType() {
@@ -31,12 +31,12 @@ public class Epic extends Task {
         subTasksIdList.remove((Integer) subtasksId);
     }
 
-    public void setEndTime(ZonedDateTime endTime) {
+    public void setEndTime(LocalDateTime endTime) {
         this.endTime = endTime;
     }
 
     @Override
-    public ZonedDateTime getEndTime() {
+    public LocalDateTime getEndTime() {
         return this.endTime;
     }
 
