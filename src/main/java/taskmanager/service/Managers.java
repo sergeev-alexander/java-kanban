@@ -1,6 +1,5 @@
 package taskmanager.service;
 
-import java.io.IOException;
 import java.net.URI;
 
 public class Managers {
@@ -17,7 +16,7 @@ public class Managers {
         return new FileBackedTasksManager(getDefaultHistoryManager(), backupFileName);
     }
 
-    public static TaskManager getDefaultTaskManager(URI url) throws IOException, InterruptedException {
+    public static TaskManager getDefaultTaskManager(URI url) {
         return new HttpTaskManager(url);
     }
 

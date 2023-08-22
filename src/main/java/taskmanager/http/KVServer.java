@@ -10,6 +10,7 @@ import java.util.Map;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
+import taskmanager.exceptions.HttpException;
 
 public class KVServer {
     public static final int PORT = 8078;
@@ -17,9 +18,13 @@ public class KVServer {
     private final HttpServer server;
     private final Map<String, String> data = new HashMap<>();
 
-    public KVServer() throws IOException {
+    public KVServer() {
         apiToken = generateApiToken();
-        server = HttpServer.create(new InetSocketAddress("localhost", PORT), 0);
+        try {
+            server = HttpServer.create(new InetSocketAddress("localhost", PORT), 0);
+        } catch (IOException e) {
+            throw new HttpException("Unable to create or bind server because " + e.getMessage());
+        }
         server.createContext("/register", this::register);
         server.createContext("/save", this::save);
         server.createContext("/load", this::load);

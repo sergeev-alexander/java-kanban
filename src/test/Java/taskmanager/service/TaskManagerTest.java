@@ -5,6 +5,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import taskmanager.exceptions.AddingAndUpdatingException;
 import taskmanager.exceptions.NoSuchTaskException;
+import taskmanager.http.KVServer;
 import taskmanager.model.*;
 
 import java.io.IOException;
@@ -19,21 +20,25 @@ abstract class TaskManagerTest<T extends TaskManager> {
 
     public static DateTimeFormatter DT_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
 
-    private T manager;
+    protected T manager;
 
-    protected T getManager() throws IOException, InterruptedException {
+    protected KVServer server;
+
+    protected T getManager() {
         return null;
     }
 
     @BeforeEach
-    public void setUp() throws IOException, InterruptedException {
+    public void setUp() {
+        server = new KVServer();
+        server.start();
         manager = getManager();
         manager.deleteAllItems();
     }
 
     @AfterEach
     public void stopServer() {
-        manager.stopServer();
+        server.stopKVServer();
     }
 
     /**

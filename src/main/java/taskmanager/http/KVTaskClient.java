@@ -8,31 +8,40 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+
 public class KVTaskClient {
-    private String apiToken;
-    private final String URL;
+    private final String apiToken;
+    private final String url;
 
 
-    public KVTaskClient(String serverURL) throws IOException, InterruptedException {
-        this.URL = serverURL;
-        register();
+    public KVTaskClient(String serverURL) {
+        this.url = serverURL;
+        this.apiToken = register();
     }
 
-    public void register() throws IOException, InterruptedException {
+    private String register() {
         String path = "register";
-        URI uri = URI.create(URL + path);
+        URI uri = URI.create(url + path);
         HttpRequest request = HttpRequest
                 .newBuilder()
                 .GET()
                 .uri(uri)
                 .build();
         HttpClient client = HttpClient.newHttpClient();
-        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-        apiToken = response.body();
+        HttpResponse<String> response;
+        try {
+            response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() != 200) {
+                throw new HttpException("response.statusCode() != 200");
+            }
+            return response.body();
+        } catch (IOException | InterruptedException e) {
+            throw new HttpException("Failed to register!");
+        }
     }
 
     public void put(String key, String json) {
-        URI url = URI.create(URL + "save/" + key + "?apiToken=" + apiToken);
+        URI url = URI.create(this.url + "save/" + key + "?apiToken=" + apiToken);
         HttpRequest request = HttpRequest
                 .newBuilder()
                 .POST(HttpRequest.BodyPublishers.ofString(json))
@@ -40,14 +49,17 @@ public class KVTaskClient {
                 .build();
         HttpClient client = HttpClient.newHttpClient();
         try {
-            client.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+            HttpResponse<Void> response = client.send(request, HttpResponse.BodyHandlers.discarding());
+            if (response.statusCode() != 200) {
+                throw new HttpException("response.statusCode() != 200");
+            }
         } catch (IOException | InterruptedException e) {
             throw new HttpException("Failed to save data!");
         }
     }
 
     public String load(String key) {
-        URI url = URI.create(this.URL + "load/" + key + "?apiToken=" + apiToken);
+        URI url = URI.create(this.url + "load/" + key + "?apiToken=" + apiToken);
         HttpRequest request = HttpRequest.newBuilder()
                 .GET()
                 .uri(url)
@@ -55,6 +67,9 @@ public class KVTaskClient {
         HttpClient client = HttpClient.newHttpClient();
         try {
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+            if (response.statusCode() != 200) {
+                throw new HttpException("response.statusCode() != 200");
+            }
             return response.body();
         } catch (IOException | InterruptedException e) {
             throw new HttpException("Failed to load data!");

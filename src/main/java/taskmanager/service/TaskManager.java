@@ -1,5 +1,6 @@
 package taskmanager.service;
 
+import com.google.gson.Gson;
 import taskmanager.model.Epic;
 import taskmanager.model.Subtask;
 import taskmanager.model.Task;
@@ -53,6 +54,6 @@ public interface TaskManager {
 
     int getIdField();
 
-    void stopServer();
+    Gson getGson();
 
 }

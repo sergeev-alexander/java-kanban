@@ -1,13 +1,17 @@
 package taskmanager.http;
 
 import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import taskmanager.model.*;
+import taskmanager.model.Epic;
+import taskmanager.model.Status;
+import taskmanager.model.Subtask;
+import taskmanager.model.Task;
+import taskmanager.service.Managers;
+import taskmanager.service.TaskManager;
 
 import java.io.IOException;
 import java.net.URI;
@@ -24,17 +28,13 @@ class HttpTaskServerTest {
 
     static HttpTaskServer server;
     HttpClient client = HttpClient.newHttpClient();
-    public static final Gson GSON = new GsonBuilder()
-            .registerTypeAdapter(LocalDateTime.class, new AdapterLocalDateTime())
-            .setPrettyPrinting()
-            .create();
-
+    static TaskManager manager = Managers.getDefaultTaskManager();
+    public static final Gson GSON = manager.getGson();
     public static DateTimeFormatter DT_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
 
     @BeforeAll
-    public static void startServer() throws IOException {
-        server = new HttpTaskServer();
-        server.start();
+    public static void startServer() {
+        server = new HttpTaskServer(manager);
     }
 
     @BeforeEach
@@ -125,9 +125,8 @@ class HttpTaskServerTest {
                 .build();
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
-        List<Task> taskList = GSON.fromJson(response.body(),
-                new TypeToken<List<Task>>() {
-                }.getType());
+        List<Task> taskList = GSON.fromJson(response.body(), new TypeToken<List<Task>>() {
+        }.getType());
         List<Integer> historyIdList = List.of(taskList.get(0).getId(), taskList.get(1).getId(), taskList.get(2).getId());
         List<Integer> expectedIdList = List.of(3, 2, 1);
         assertEquals(expectedIdList, historyIdList);

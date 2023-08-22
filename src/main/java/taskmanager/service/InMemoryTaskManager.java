@@ -1,5 +1,7 @@
 package taskmanager.service;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import taskmanager.exceptions.AddingAndUpdatingException;
 import taskmanager.exceptions.NoSuchTaskException;
 import taskmanager.model.*;
@@ -31,7 +33,11 @@ public class InMemoryTaskManager implements TaskManager {
     }
 
     @Override
-    public void stopServer() {
+    public Gson getGson() {
+        return new GsonBuilder()
+                .registerTypeAdapter(LocalDateTime.class, new AdapterLocalDateTime())
+                .setPrettyPrinting()
+                .create();
     }
 
     @Override

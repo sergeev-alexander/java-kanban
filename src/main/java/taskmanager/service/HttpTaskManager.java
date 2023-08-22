@@ -1,36 +1,37 @@
 package taskmanager.service;
 
-import com.google.gson.*;
-import taskmanager.http.KVServer;
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
 import taskmanager.http.KVTaskClient;
-import taskmanager.model.AdapterLocalDateTime;
 import taskmanager.model.Epic;
 import taskmanager.model.Subtask;
 import taskmanager.model.Task;
 
-import java.io.IOException;
 import java.net.URI;
-import java.time.LocalDateTime;
+import java.util.stream.Collectors;
 
 public class HttpTaskManager extends FileBackedTasksManager {
 
-    private final KVTaskClient client;
-    private final KVServer server;
-    public static final Gson GSON = new GsonBuilder()
-            .registerTypeAdapter(LocalDateTime.class, new AdapterLocalDateTime())
-            .setPrettyPrinting()
-            .create();
+    private static final String TASK_KEY = "tasks/";
+    private static final String EPIC_KEY = "epics/";
+    private static final String SUBTASK_KEY = "subtasks/";
+    private static final String HISTORY_KEY = "history/";
 
-    public HttpTaskManager(URI url) throws IOException, InterruptedException {
-        server = new KVServer();
-        server.start();
+    private final KVTaskClient client;
+    private final Gson GSON;
+
+    public HttpTaskManager(URI url, boolean needToBackup) {
         client = new KVTaskClient(url.toString());
-        backup();
+        GSON = getGson();
+        if (needToBackup) {
+            backup();
+        }
     }
 
-    @Override
-    public void stopServer(){
-        server.stopKVServer();
+    public HttpTaskManager(URI url) {
+        this(url, false);
     }
 
     @Override
@@ -38,16 +39,18 @@ public class HttpTaskManager extends FileBackedTasksManager {
         String jsonTasks = GSON.toJson(taskMap.values());
         String jsonEpics = GSON.toJson(epicMap.values());
         String jsonSubtasks = GSON.toJson(subtaskMap.values());
-        String jsonHistory = GSON.toJson(getHistory());
+        String jsonHistory = GSON.toJson(getHistory().stream()
+                .map(Task::getId)
+                .collect(Collectors.toList()));
 
-        client.put("tasks/", jsonTasks);
-        client.put("epics/", jsonEpics);
-        client.put("subtasks/", jsonSubtasks);
-        client.put("history/", jsonHistory);
+        client.put(TASK_KEY, jsonTasks);
+        client.put(EPIC_KEY, jsonEpics);
+        client.put(SUBTASK_KEY, jsonSubtasks);
+        client.put(HISTORY_KEY, jsonHistory);
     }
 
-    public void backup() {
-        JsonElement jsonTasks = JsonParser.parseString(client.load("tasks"));
+    private void backup() {
+        JsonElement jsonTasks = JsonParser.parseString(client.load(TASK_KEY));
         if (!jsonTasks.isJsonNull()) {
             JsonArray jsonTasksArray = jsonTasks.getAsJsonArray();
             for (JsonElement jsonTask : jsonTasksArray) {
@@ -56,30 +59,29 @@ public class HttpTaskManager extends FileBackedTasksManager {
                 prioritySet.add(task);
             }
         }
-        JsonElement jsonEpics = JsonParser.parseString(client.load("epics"));
+        JsonElement jsonEpics = JsonParser.parseString(client.load(EPIC_KEY));
         if (!jsonEpics.isJsonNull()) {
             JsonArray jsonEpicsArray = jsonEpics.getAsJsonArray();
             for (JsonElement jsonEpic : jsonEpicsArray) {
                 Epic epic = GSON.fromJson(jsonEpic, Epic.class);
                 epicMap.put(epic.getId(), epic);
-                prioritySet.add(epic);
             }
         }
-        JsonElement jsonSubtasks = JsonParser.parseString(client.load("subtasks"));
+        JsonElement jsonSubtasks = JsonParser.parseString(client.load(SUBTASK_KEY));
         if (!jsonSubtasks.isJsonNull()) {
             JsonArray jsonSubtasksArray = jsonSubtasks.getAsJsonArray();
             for (JsonElement jsonSubtask : jsonSubtasksArray) {
                 Subtask subtask = GSON.fromJson(jsonSubtask, Subtask.class);
-                taskMap.put(subtask.getId(), subtask);
+                subtaskMap.put(subtask.getId(), subtask);
                 prioritySet.add(subtask);
             }
         }
-        JsonElement jsonHistory = JsonParser.parseString(client.load("history"));
+        JsonElement jsonHistory = JsonParser.parseString(client.load(HISTORY_KEY));
         if (!jsonHistory.isJsonNull()) {
             JsonArray jsonHistoryArray = jsonHistory.getAsJsonArray();
-            for (JsonElement jsonHistoryElement : jsonHistoryArray) {
-                Task task = GSON.fromJson(jsonHistoryElement, Task.class);
-                getTaskById(task.getId());
+            for (JsonElement jsonHistoryId : jsonHistoryArray) {
+                int id = jsonHistoryId.getAsInt();
+                getTaskById(id);
             }
         }
     }

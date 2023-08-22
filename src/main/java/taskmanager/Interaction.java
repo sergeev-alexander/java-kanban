@@ -2,11 +2,10 @@ package taskmanager;
 
 import taskmanager.exceptions.AddingAndUpdatingException;
 import taskmanager.exceptions.NoSuchTaskException;
-import taskmanager.service.HttpTaskManager;
 import taskmanager.model.*;
+import taskmanager.service.HttpTaskManager;
 import taskmanager.service.TaskManager;
 
-import java.io.IOException;
 import java.net.URI;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -22,10 +21,7 @@ public class Interaction {
     Scanner sc = new Scanner(System.in);
     TaskManager taskManager = new HttpTaskManager(URL);
 
-    public Interaction() throws IOException, InterruptedException {
-    }
-
-    public void interaction() throws IOException, InterruptedException {
+    public void interaction() {
         while (true) {
             printMenu();
             String input = sc.nextLine();
@@ -94,7 +90,6 @@ public class Interaction {
                     break;
                 case 0:
                     System.out.println("Good buy!");
-                    taskManager.stopServer();
                     return;
                 default:
                     System.out.println("[" + input + "] - Wrong command!" +
