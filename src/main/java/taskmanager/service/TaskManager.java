@@ -54,6 +54,4 @@ public interface TaskManager {
 
     int getIdField();
 
-    Gson getGson();
-
 }

@@ -23,7 +23,7 @@ public class HttpTaskServer {
     private static final Charset DEFAULT_CHARSET = StandardCharsets.UTF_8;
     private final HttpServer server;
     private final TaskManager manager;
-    private final Gson GSON;
+    private static final Gson GSON = Managers.getGson();
 
     public HttpTaskServer(TaskManager manager) {
         try {
@@ -35,7 +35,6 @@ public class HttpTaskServer {
         }
         server.createContext("/tasks", new TasksHandler());
         this.manager = manager;
-        GSON = manager.getGson();
     }
 
     public HttpTaskServer() {

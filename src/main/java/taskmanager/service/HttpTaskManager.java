@@ -18,13 +18,11 @@ public class HttpTaskManager extends FileBackedTasksManager {
     private static final String EPIC_KEY = "epics/";
     private static final String SUBTASK_KEY = "subtasks/";
     private static final String HISTORY_KEY = "history/";
-
     private final KVTaskClient client;
-    private final Gson GSON;
+    private static final Gson GSON = Managers.getGson();
 
     public HttpTaskManager(URI url, boolean needToBackup) {
         client = new KVTaskClient(url.toString());
-        GSON = getGson();
         if (needToBackup) {
             backup();
         }

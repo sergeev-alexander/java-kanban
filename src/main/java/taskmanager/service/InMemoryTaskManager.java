@@ -33,14 +33,6 @@ public class InMemoryTaskManager implements TaskManager {
     }
 
     @Override
-    public Gson getGson() {
-        return new GsonBuilder()
-                .registerTypeAdapter(LocalDateTime.class, new AdapterLocalDateTime())
-                .setPrettyPrinting()
-                .create();
-    }
-
-    @Override
     public List<Task> getHistory() {
         return historyManager.getHistory();
     }
